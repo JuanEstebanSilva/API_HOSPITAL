@@ -1,46 +1,45 @@
-const crypto = require("crypto");
+const {
+ buscarClientePorApiKey
+} = require("../services/apiKeys.service");
 // ========================================
-// Comparación segura de valores
-// ========================================
-const compararSeguro = (valorRecibido, valorEsperado) => {
-    const recibido = Buffer.from(valorRecibido);
-    const esperado = Buffer.from(valorEsperado);
-    // timingSafeEqual exige buffers del mismo tamaño.
-    if (recibido.length !== esperado.length) {
-        return false;
-    }
-    return crypto.timingSafeEqual(recibido, esperado);
-};
-// ========================================
-// Middleware de autenticación por API Key
+// Validar API Key
 // ========================================
 const validarApiKey = (req, res, next) => {
-    const apiKeyConfigurada = process.env.API_KEY;
-    // Error de configuración del servidor.
-    if (!apiKeyConfigurada) {
-        console.error(
-            "ERROR: La variable de entorno API_KEY no está configurada."
-        );
-        return res.status(500).json({
-            mensaje: "Error de configuración del servidor"
-        });
-    }
-    // Express normaliza los nombres de headers.
-    const apiKeyRecibida = req.get("X-API-Key");
-    if (!apiKeyRecibida) {
-        return res.status(401).json({
-            mensaje: "API Key requerida"
-        });
-    }
-    const esValida = compararSeguro(
-        apiKeyRecibida,
-        apiKeyConfigurada
-    );
-    if (!esValida) {
-        return res.status(401).json({
-            mensaje: "API Key inválida"
-        });
-    }
-    next();
+ const apiKeyRecibida =
+ req.get("X-API-Key");
+ // --------------------------------------
+ // API Key ausente
+ // --------------------------------------
+ if (!apiKeyRecibida) {
+ return res.status(401).json({
+ mensaje: "API Key requerida"
+ });
+ }
+ // --------------------------------------
+ // Buscar cliente
+ // --------------------------------------
+ const cliente =
+ buscarClientePorApiKey(apiKeyRecibida);
+ if (!cliente) {
+ return res.status(401).json({
+ mensaje: "API Key inválida"
+ });
+ }
+ // --------------------------------------
+ // Verificar estado de la API Key
+ // --------------------------------------
+ if (!cliente.activa) {
+ return res.status(403).json({
+ mensaje: "API Key deshabilitada"
+ });
+ }
+ // --------------------------------------
+ // Asociar cliente autenticado
+ // --------------------------------------
+ req.clienteApi = {
+ id: cliente.id,
+ nombre: cliente.cliente
+ };
+ next();
 };
 module.exports = validarApiKey;

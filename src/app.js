@@ -2,8 +2,12 @@ require(
   "dotenv"
 ).config();
 
+const seguridadRoutes =
+  require("./routes/seguridad.routes");
+
 const validarApiKey =
- require("./middlewares/apiKey.middleware")
+  require("./middlewares/apiKey.middleware")
+  
 
 const express =
   require(
@@ -213,8 +217,14 @@ app.get(
 
 
 // ========================================
-// Recursos
+// Recursos y Rutas
 // ========================================
+
+app.use(
+  "/api/seguridad",
+  seguridadRoutes
+);
+
 
 app.use(
   "/api/pacientes",
