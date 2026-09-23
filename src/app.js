@@ -2,30 +2,20 @@ require(
   "dotenv"
 ).config();
 
-const seguridadRoutes =
-  require("./routes/seguridad.routes");
-
-const validarApiKey =
-  require("./middlewares/apiKey.middleware")
-  
-
 const express =
   require(
     "express"
   );
-
 
 const helmet =
   require(
     "helmet"
   );
 
-
 const cors =
   require(
     "cors"
   );
-
 
 const {
   rateLimit
@@ -33,56 +23,57 @@ const {
   "express-rate-limit"
 );
 
-
 const swaggerUi =
   require(
     "swagger-ui-express"
   );
-
 
 const swaggerSpec =
   require(
     "./docs/swagger"
   );
 
-
 // ========================================
 // Rutas
 // ========================================
+
+const seguridadRoutes =
+  require("./routes/seguridad.routes");
+
+const authRoutes =
+ require("./routes/auth.routes");
 
 const pacientesRoutes =
   require(
     "./routes/pacientes.routes"
   );
 
-
 const especialidadesRoutes =
   require(
     "./routes/especialidades.routes"
   );
-
 
 const medicosRoutes =
   require(
     "./routes/medicos.routes"
   );
 
-
 const consultoriosRoutes =
   require(
     "./routes/consultorios.routes"
   );
-
 
 const citasRoutes =
   require(
     "./routes/citas.routes"
   );
 
+// ========================================
+// Middlewares propios
+// ========================================
 
-// ========================================
-// Middleware de errores
-// ========================================
+const validarApiKey =
+  require("./middlewares/apiKey.middleware");
 
 const {
   rutaNoEncontrada,
@@ -91,14 +82,12 @@ const {
   "./middlewares/errores.middleware"
 );
 
-
 // ========================================
-// Aplicación
+// Aplicación (¡DEBE IR ANTES DE USAR "app")
 // ========================================
 
 const app =
   express();
-
 
 const PORT =
   process.env.PORT ||
@@ -112,7 +101,6 @@ const PORT =
 app.disable(
   "x-powered-by"
 );
-
 
 app.use(
   helmet()
@@ -188,10 +176,6 @@ app.use(
   limiter
 );
 
-// ========================================
-// Autenticación mediante API Key
-// ========================================
-app.use("/api", validarApiKey);
 
 // ========================================
 // Ruta principal
@@ -214,6 +198,23 @@ app.get(
       });
   }
 );
+
+
+// ========================================
+// Autenticación (Ruta pública - ANTES de la API Key)
+// ========================================
+
+app.use(
+ "/api/auth",
+ authRoutes
+);
+
+
+// ========================================
+// Autenticación mediante API Key
+// ========================================
+
+app.use("/api", validarApiKey);
 
 
 // ========================================
