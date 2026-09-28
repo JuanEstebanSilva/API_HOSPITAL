@@ -1,13 +1,11 @@
 const express = require("express");
-const {
-  registrar,
-  login
-} = require("../controllers/auth.controller");
+const { registrar, login } = require("../controllers/auth.controller");
 const {
   validarRegistro,
   validarLogin
 } = require("../middlewares/auth.validator");
 const validar = require("../middlewares/validar.middleware");
+
 const router = express.Router();
 
 /**
@@ -20,26 +18,18 @@ const router = express.Router();
  *         - nombre
  *         - email
  *         - password
- *         - rol
  *       properties:
  *         nombre:
  *           type: string
- *           example: Administrador Hospital
+ *           example: Paciente Hospital
  *         email:
  *           type: string
  *           format: email
- *           example: admin@hospital.com
+ *           example: paciente@hospital.com
  *         password:
  *           type: string
  *           format: password
  *           example: ClaveSegura2026!
- *         rol:
- *           type: string
- *           enum:
- *             - administrador
- *             - medico
- *             - paciente
- *           example: administrador
  *
  *     LoginUsuario:
  *       type: object
@@ -50,7 +40,7 @@ const router = express.Router();
  *         email:
  *           type: string
  *           format: email
- *           example: admin@hospital.com
+ *           example: paciente@hospital.com
  *         password:
  *           type: string
  *           format: password
@@ -63,8 +53,11 @@ const router = express.Router();
  *   post:
  *     tags:
  *       - Autenticación
- *     summary: Registrar un usuario
- *     description: Registra un usuario almacenando su contraseña mediante bcrypt.
+ *     summary: Registrar un nuevo usuario
+ *     description: >
+ *       Registra un nuevo usuario utilizando bcrypt para proteger
+ *       la contraseña. El rol es asignado por el servidor ("paciente") y no puede
+ *       ser definido por el cliente.
  *     requestBody:
  *       required: true
  *       content:
@@ -93,7 +86,7 @@ router.post(
  *     tags:
  *       - Autenticación
  *     summary: Iniciar sesión
- *     description: Verifica email y contraseña. En este bloque todavía no genera JWT.
+ *     description: Verifica credenciales de acceso (email y contraseña).
  *     requestBody:
  *       required: true
  *       content:
