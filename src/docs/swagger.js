@@ -20,7 +20,15 @@ const options = {
           type: "apiKey",
           in: "header",
           name: "X-API-Key",
-          description: "API Key requerida para consumir los endpoints protegidos."
+          description:
+            "API Key requerida para consumir los endpoints protegidos."
+        },
+        BearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description:
+            "JWT obtenido mediante el endpoint de login."
         }
       }
     },

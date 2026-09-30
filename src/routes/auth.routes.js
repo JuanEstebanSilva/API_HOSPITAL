@@ -6,6 +6,8 @@ const {
 } = require("../middlewares/auth.validator");
 const validar = require("../middlewares/validar.middleware");
 
+const autenticarJWT = require("../middlewares/auth.middleware");
+
 const router = express.Router();
 
 /**
@@ -108,6 +110,35 @@ router.post(
   validarLogin,
   validar,
   login
+);
+
+/**
+ * @swagger
+ * /api/auth/perfil:
+ *   get:
+ *     tags:
+ *       - Autenticación
+ *     summary: Obtener perfil del usuario autenticado
+ *     description: Requiere API Key y un JWT válido.
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Usuario autenticado correctamente
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ */
+router.get(
+  "/perfil",
+  autenticarJWT,
+  (req, res) => {
+    return res.status(200).json({
+      mensaje: "Usuario autenticado mediante JWT",
+      usuario: req.usuario,
+      clienteApi: req.clienteApi
+    });
+  }
 );
 
 module.exports = router;
