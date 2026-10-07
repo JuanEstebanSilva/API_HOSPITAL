@@ -16,6 +16,48 @@ const especialidadesService =
     "../services/especialidades.service"
   );
 
+const usuariosService =
+  require(
+    "../services/usuarios.service"
+  );
+
+// ========================================
+// Validar reglas de asociación usuario <-> médico
+// ========================================
+const validarUsuarioMedico = (usuarioId, medicoIdExcluir = null) => {
+  if (!usuarioId) {
+    return { valido: true };
+  }
+
+  const usuario = usuariosService.obtenerUsuarioPorId(usuarioId);
+  if (!usuario) {
+    return {
+      valido: false,
+      status: 400,
+      mensaje: "El usuario asociado no existe"
+    };
+  }
+
+  if (usuario.rol !== "medico") {
+    return {
+      valido: false,
+      status: 409,
+      mensaje: "El usuario asociado no tiene rol medico"
+    };
+  }
+
+  const medicoAsociado = medicosService.obtenerMedicoPorUsuarioId(usuarioId);
+  if (medicoAsociado && (!medicoIdExcluir || medicoAsociado.id !== Number(medicoIdExcluir))) {
+    return {
+      valido: false,
+      status: 409,
+      mensaje: "El usuario ya está asociado a un médico"
+    };
+  }
+
+  return { valido: true };
+};
+
 
 // ========================================
 // GET todos
@@ -149,6 +191,13 @@ const crearMedico = (
         ]
       }
     );
+
+  const validacionUsuario = validarUsuarioMedico(datosPermitidos.usuarioId);
+  if (!validacionUsuario.valido) {
+    return res.status(validacionUsuario.status).json({
+      mensaje: validacionUsuario.mensaje
+    });
+  }
 
 
   // ----------------------------------------
@@ -286,6 +335,13 @@ const actualizarMedico = (
         ]
       }
     );
+
+  const validacionUsuario = validarUsuarioMedico(datosPermitidos.usuarioId, id);
+  if (!validacionUsuario.valido) {
+    return res.status(validacionUsuario.status).json({
+      mensaje: validacionUsuario.mensaje
+    });
+  }
 
 
   // ----------------------------------------
@@ -466,6 +522,15 @@ const actualizarMedicoParcial = (
         mensaje:
           "Debe enviar al menos un campo para actualizar"
       });
+  }
+
+  if (datosPermitidos.usuarioId !== undefined) {
+    const validacionUsuario = validarUsuarioMedico(datosPermitidos.usuarioId, id);
+    if (!validacionUsuario.valido) {
+      return res.status(validacionUsuario.status).json({
+        mensaje: validacionUsuario.mensaje
+      });
+    }
   }
 
 

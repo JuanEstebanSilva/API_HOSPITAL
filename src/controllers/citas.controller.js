@@ -896,11 +896,66 @@ const eliminarCita = (
 };
 
 
+// ========================================
+// GET mis-citas (Identidad derivada del JWT)
+// ========================================
+
+const obtenerMisCitas = (
+  req,
+  res
+) => {
+  const { rol, id: usuarioId } = req.usuario;
+
+  if (rol === "administrador") {
+    return res.status(403).json({
+      mensaje: "Endpoint restringido a perfiles"
+    });
+  }
+
+  if (rol === "paciente") {
+    const paciente =
+      pacientesService.obtenerPacientePorUsuarioId(usuarioId);
+
+    if (!paciente) {
+      return res.status(403).json({
+        mensaje: "El usuario no tiene un paciente asociado"
+      });
+    }
+
+    const misCitas =
+      citasService.obtenerCitasPorPaciente(paciente.id);
+
+    return res.status(200).json(misCitas);
+  }
+
+  if (rol === "medico") {
+    const medico =
+      medicosService.obtenerMedicoPorUsuarioId(usuarioId);
+
+    if (!medico) {
+      return res.status(403).json({
+        mensaje: "El usuario no tiene un médico asociado"
+      });
+    }
+
+    const misCitas =
+      citasService.obtenerCitasPorMedico(medico.id);
+
+    return res.status(200).json(misCitas);
+  }
+
+  return res.status(403).json({
+    mensaje: "No tiene permisos para acceder a este recurso"
+  });
+};
+
+
 module.exports = {
   obtenerCitas,
   obtenerCitaPorId,
   obtenerCitasPorPaciente,
   obtenerCitasPorMedico,
+  obtenerMisCitas,
   crearCita,
   actualizarCita,
   actualizarCitaParcial,

@@ -3,7 +3,6 @@ const {
   param
 } = require("express-validator");
 
-
 // ========================================
 // Validar ID del médico
 // ========================================
@@ -17,7 +16,6 @@ const validarIdMedico = [
       "El id debe ser un número entero positivo"
     )
 ];
-
 
 // ========================================
 // Validar ID de especialidad
@@ -34,13 +32,17 @@ const validarIdEspecialidad = [
     )
 ];
 
-
 // ========================================
 // POST y PUT
 // Todos los campos son obligatorios
 // ========================================
 
 const validarMedico = [
+  body("usuarioId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage("El usuarioId debe ser un entero positivo")
+    .toInt(),
 
   body("nombre")
     .isString()
@@ -60,7 +62,6 @@ const validarMedico = [
       "El nombre debe tener entre 3 y 100 caracteres"
     ),
 
-
   body("registroMedico")
     .isString()
     .withMessage(
@@ -76,14 +77,12 @@ const validarMedico = [
       "El registro médico debe tener un formato como RM-45871"
     ),
 
-
   body("email")
     .isEmail()
     .withMessage(
       "El correo electrónico no es válido"
     )
     .normalizeEmail(),
-
 
   body("telefono")
     .isString()
@@ -96,7 +95,6 @@ const validarMedico = [
       "El teléfono debe contener entre 7 y 15 dígitos"
     ),
 
-
   body("especialidadId")
     .isInt({
       min: 1
@@ -106,7 +104,6 @@ const validarMedico = [
     )
     .toInt(),
 
-
   body("activo")
     .isBoolean()
     .withMessage(
@@ -115,13 +112,17 @@ const validarMedico = [
     .toBoolean()
 ];
 
-
 // ========================================
 // PATCH
 // Todos los campos son opcionales
 // ========================================
 
 const validarMedicoParcial = [
+  body("usuarioId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage("El usuarioId debe ser un entero positivo")
+    .toInt(),
 
   body("nombre")
     .optional()
@@ -142,7 +143,6 @@ const validarMedicoParcial = [
       "El nombre debe tener entre 3 y 100 caracteres"
     ),
 
-
   body("registroMedico")
     .optional()
     .isString()
@@ -155,7 +155,6 @@ const validarMedicoParcial = [
       "El registro médico debe tener un formato como RM-45871"
     ),
 
-
   body("email")
     .optional()
     .isEmail()
@@ -163,7 +162,6 @@ const validarMedicoParcial = [
       "El correo electrónico no es válido"
     )
     .normalizeEmail(),
-
 
   body("telefono")
     .optional()
@@ -177,7 +175,6 @@ const validarMedicoParcial = [
       "El teléfono debe contener entre 7 y 15 dígitos"
     ),
 
-
   body("especialidadId")
     .optional()
     .isInt({
@@ -188,7 +185,6 @@ const validarMedicoParcial = [
     )
     .toInt(),
 
-
   body("activo")
     .optional()
     .isBoolean()
@@ -197,7 +193,6 @@ const validarMedicoParcial = [
     )
     .toBoolean()
 ];
-
 
 module.exports = {
   validarIdMedico,

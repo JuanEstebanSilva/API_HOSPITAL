@@ -1,9 +1,7 @@
 const {
   body,
   param
-} = require(
-  "express-validator"
-);
+} = require("express-validator");
 
 const validarIdPaciente = [
   param("id")
@@ -16,6 +14,14 @@ const validarIdPaciente = [
 ];
 
 const validarPaciente = [
+  body("usuarioId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage(
+      "El usuarioId debe ser un entero positivo"
+    )
+    .toInt(),
+
   body("nombre")
     .isString()
     .withMessage(
@@ -82,6 +88,14 @@ const validarPaciente = [
 // ========================================
 
 const validarPacienteParcial = [
+  body("usuarioId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage(
+      "El usuarioId debe ser un entero positivo"
+    )
+    .toInt(),
+
   body("nombre")
     .optional()
     .isString()

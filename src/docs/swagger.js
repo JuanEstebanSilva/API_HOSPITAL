@@ -66,6 +66,10 @@ const options = {
       {
         name: "Citas",
         description: "Programación, modificación y gestión del estado de las citas médicas"
+      },
+      {
+        name: "Usuarios",
+        description: "Gestión administrativa de usuarios del sistema"
       }
     ]
   },

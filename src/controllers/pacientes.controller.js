@@ -1,264 +1,193 @@
 const {
   matchedData
-} = require(
-  "express-validator"
-);
+} = require("express-validator");
 
-const pacientesService =
-  require(
-    "../services/pacientes.service"
-  );
+const pacientesService = require("../services/pacientes.service");
+const usuariosService = require("../services/usuarios.service");
+const citasService = require("../services/citas.service");
 
-// Movido aquí arriba para que sea accesible en todo el archivo
-const citasService =
-  require(
-    "../services/citas.service"
-  );
+// ========================================
+// Validar reglas de asociación usuario <-> paciente
+// ========================================
+const validarUsuarioPaciente = (usuarioId, pacienteIdExcluir = null) => {
+  if (!usuarioId) {
+    return { valido: true };
+  }
 
-const obtenerPacientes = (
-  req,
-  res
-) => {
-  const pacientes =
-    pacientesService
-      .obtenerPacientes();
+  const usuario = usuariosService.obtenerUsuarioPorId(usuarioId);
+  if (!usuario) {
+    return {
+      valido: false,
+      status: 400,
+      mensaje: "El usuario asociado no existe"
+    };
+  }
 
-  res
-    .status(200)
-    .json(
-      pacientes
-    );
+  if (usuario.rol !== "paciente") {
+    return {
+      valido: false,
+      status: 409,
+      mensaje: "El usuario asociado no tiene rol paciente"
+    };
+  }
+
+  const pacienteAsociado = pacientesService.obtenerPacientePorUsuarioId(usuarioId);
+  if (pacienteAsociado && (!pacienteIdExcluir || pacienteAsociado.id !== Number(pacienteIdExcluir))) {
+    return {
+      valido: false,
+      status: 409,
+      mensaje: "El usuario ya está asociado a un paciente"
+    };
+  }
+
+  return { valido: true };
 };
 
-const obtenerPacientePorId = (
-  req,
-  res
-) => {
-  const {
-    id
-  } = req.params;
+const obtenerPacientes = (req, res) => {
+  const pacientes = pacientesService.obtenerPacientes();
+  res.status(200).json(pacientes);
+};
 
-  const paciente =
-    pacientesService
-      .obtenerPacientePorId(
-        id
-      );
+const obtenerPacientePorId = (req, res) => {
+  const { id } = req.params;
+  const paciente = pacientesService.obtenerPacientePorId(id);
 
   if (!paciente) {
-    return res
-      .status(404)
-      .json({
-        mensaje:
-          "Paciente no encontrado"
-      });
+    return res.status(404).json({
+      mensaje: "Paciente no encontrado"
+    });
   }
 
-  res
-    .status(200)
-    .json(
-      paciente
-    );
+  res.status(200).json(paciente);
 };
 
-const crearPaciente = (
-  req,
-  res
-) => {
-  const datosPermitidos =
-    matchedData(
-      req,
-      {
-        locations: [
-          "body"
-        ]
-      }
-    );
+const crearPaciente = (req, res) => {
+  const datosPermitidos = matchedData(req, {
+    locations: ["body"]
+  });
 
-  const existente =
-    pacientesService
-      .buscarPacientePorDocumento(
-        datosPermitidos.documento
-      );
+  const validacionUsuario = validarUsuarioPaciente(datosPermitidos.usuarioId);
+  if (!validacionUsuario.valido) {
+    return res.status(validacionUsuario.status).json({
+      mensaje: validacionUsuario.mensaje
+    });
+  }
+
+  const existente = pacientesService.buscarPacientePorDocumento(
+    datosPermitidos.documento
+  );
 
   if (existente) {
-    return res
-      .status(409)
-      .json({
-        mensaje:
-          "Ya existe un paciente con ese documento"
-      });
+    return res.status(409).json({
+      mensaje: "Ya existe un paciente con ese documento"
+    });
   }
 
-  const pacienteCreado =
-    pacientesService
-      .crearPaciente(
-        datosPermitidos
-      );
+  const pacienteCreado = pacientesService.crearPaciente(
+    datosPermitidos
+  );
 
-  res
-    .status(201)
-    .json({
-      mensaje:
-        "Paciente creado correctamente",
-
-      paciente:
-        pacienteCreado
-    });
+  res.status(201).json({
+    mensaje: "Paciente creado correctamente",
+    paciente: pacienteCreado
+  });
 };
 
-const actualizarPaciente = (
-  req,
-  res
-) => {
-  const {
-    id
-  } = req.params;
+const actualizarPaciente = (req, res) => {
+  const { id } = req.params;
 
-  const datosPermitidos =
-    matchedData(
-      req,
-      {
-        locations: [
-          "body"
-        ]
-      }
-    );
+  const datosPermitidos = matchedData(req, {
+    locations: ["body"]
+  });
 
-  const existente =
-    pacientesService
-      .buscarPacientePorDocumento(
-        datosPermitidos.documento
-      );
-
-  if (
-    existente &&
-    existente.id !==
-      Number(id)
-  ) {
-    return res
-      .status(409)
-      .json({
-        mensaje:
-          "El documento pertenece a otro paciente"
-      });
-  }
-
-  const pacienteActualizado =
-    pacientesService
-      .actualizarPaciente(
-        id,
-        datosPermitidos
-      );
-
-  if (
-    !pacienteActualizado
-  ) {
-    return res
-      .status(404)
-      .json({
-        mensaje:
-          "Paciente no encontrado"
-      });
-  }
-
-  res
-    .status(200)
-    .json({
-      mensaje:
-        "Paciente actualizado correctamente",
-
-      paciente:
-        pacienteActualizado
+  const validacionUsuario = validarUsuarioPaciente(datosPermitidos.usuarioId, id);
+  if (!validacionUsuario.valido) {
+    return res.status(validacionUsuario.status).json({
+      mensaje: validacionUsuario.mensaje
     });
-};
-
-const actualizarPacienteParcial = (
-  req,
-  res
-) => {
-  const {
-    id
-  } = req.params;
-
-  const datosPermitidos =
-    matchedData(
-      req,
-      {
-        locations: [
-          "body"
-        ]
-      }
-    );
-
-  if (
-    Object.keys(
-      datosPermitidos
-    ).length === 0
-  ) {
-    return res
-      .status(400)
-      .json({
-        mensaje:
-          "Debe enviar al menos un campo para actualizar"
-      });
   }
 
-  if (
+  const existente = pacientesService.buscarPacientePorDocumento(
     datosPermitidos.documento
-  ) {
-    const existente =
-      pacientesService
-        .buscarPacientePorDocumento(
-          datosPermitidos.documento
-        );
+  );
 
-    if (
-      existente &&
-      existente.id !==
-        Number(id)
-    ) {
-      return res
-        .status(409)
-        .json({
-          mensaje:
-            "El documento pertenece a otro paciente"
-        });
+  if (existente && existente.id !== Number(id)) {
+    return res.status(409).json({
+      mensaje: "El documento pertenece a otro paciente"
+    });
+  }
+
+  const pacienteActualizado = pacientesService.actualizarPaciente(
+    id,
+    datosPermitidos
+  );
+
+  if (!pacienteActualizado) {
+    return res.status(404).json({
+      mensaje: "Paciente no encontrado"
+    });
+  }
+
+  res.status(200).json({
+    mensaje: "Paciente actualizado correctamente",
+    paciente: pacienteActualizado
+  });
+};
+
+const actualizarPacienteParcial = (req, res) => {
+  const { id } = req.params;
+
+  const datosPermitidos = matchedData(req, {
+    locations: ["body"]
+  });
+
+  if (Object.keys(datosPermitidos).length === 0) {
+    return res.status(400).json({
+      mensaje: "Debe enviar al menos un campo para actualizar"
+    });
+  }
+
+  if (datosPermitidos.usuarioId !== undefined) {
+    const validacionUsuario = validarUsuarioPaciente(datosPermitidos.usuarioId, id);
+    if (!validacionUsuario.valido) {
+      return res.status(validacionUsuario.status).json({
+        mensaje: validacionUsuario.mensaje
+      });
     }
   }
 
-  const pacienteActualizado =
-    pacientesService
-      .actualizarPacienteParcial(
-        id,
-        datosPermitidos
-      );
+  if (datosPermitidos.documento) {
+    const existente = pacientesService.buscarPacientePorDocumento(
+      datosPermitidos.documento
+    );
 
-  if (
-    !pacienteActualizado
-  ) {
-    return res
-      .status(404)
-      .json({
-        mensaje:
-          "Paciente no encontrado"
+    if (existente && existente.id !== Number(id)) {
+      return res.status(409).json({
+        mensaje: "El documento pertenece a otro paciente"
       });
+    }
   }
 
-  res
-    .status(200)
-    .json({
-      mensaje:
-        "Paciente actualizado parcialmente",
+  const pacienteActualizado = pacientesService.actualizarPacienteParcial(
+    id,
+    datosPermitidos
+  );
 
-      paciente:
-        pacienteActualizado
+  if (!pacienteActualizado) {
+    return res.status(404).json({
+      mensaje: "Paciente no encontrado"
     });
+  }
+
+  res.status(200).json({
+    mensaje: "Paciente actualizado parcialmente",
+    paciente: pacienteActualizado
+  });
 };
 
 const eliminarPaciente = (req, res) => {
   const { id } = req.params;
-  const paciente =
-    pacientesService.obtenerPacientePorId(id);
+  const paciente = pacientesService.obtenerPacientePorId(id);
   
   if (!paciente) {
     return res.status(404).json({
@@ -266,18 +195,15 @@ const eliminarPaciente = (req, res) => {
     });
   }
 
-  const tieneCitas =
-    citasService.pacienteTieneCitas(id);
+  const tieneCitas = citasService.pacienteTieneCitas(id);
   
   if (tieneCitas) {
     return res.status(409).json({
-      mensaje:
-        "No se puede eliminar el paciente porque tiene citas asociadas"
+      mensaje: "No se puede eliminar el paciente porque tiene citas asociadas"
     });
   }
 
-  const pacienteEliminado =
-    pacientesService.eliminarPaciente(id);
+  const pacienteEliminado = pacientesService.eliminarPaciente(id);
   
   return res.status(200).json({
     mensaje: "Paciente eliminado correctamente",

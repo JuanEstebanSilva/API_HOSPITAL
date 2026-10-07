@@ -68,6 +68,16 @@ const citasRoutes =
     "./routes/citas.routes"
   );
 
+const usuariosRoutes =
+  require(
+    "./routes/usuarios.routes"
+  );
+
+const usuariosService =
+  require(
+    "./services/usuarios.service"
+  );
+
 // ========================================
 // Middlewares propios
 // ========================================
@@ -257,6 +267,12 @@ app.use(
 );
 
 
+app.use(
+  "/api/usuarios",
+  usuariosRoutes
+);
+
+
 // ========================================
 // Swagger
 // ========================================
@@ -313,21 +329,28 @@ app.use(
 // Servidor
 // ========================================
 
-app.listen(
-  PORT,
+const iniciarServidor = async () => {
+  try {
+    await usuariosService.crearAdministradorInicial();
 
-  () => {
-
-    console.log(
-      `Servidor ejecutándose en http://localhost:${PORT}`
+    app.listen(PORT, () => {
+      console.log(
+        `Servidor ejecutándose en http://localhost:${PORT}`
+      );
+      console.log(
+        `Swagger UI: http://localhost:${PORT}/api-docs`
+      );
+      console.log(
+        `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
+      );
+    });
+  } catch (error) {
+    console.error(
+      "Error al iniciar el servidor:",
+      error.message
     );
-
-    console.log(
-      `Swagger UI: http://localhost:${PORT}/api-docs`
-    );
-
-    console.log(
-      `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
-    );
+    process.exit(1);
   }
-);
+};
+
+iniciarServidor();

@@ -18,6 +18,14 @@ const validar = require(
   "../middlewares/validar.middleware"
 );
 
+const autenticarJWT = require(
+  "../middlewares/auth.middleware"
+);
+
+const autorizarRoles = require(
+  "../middlewares/roles.middleware"
+);
+
 /**
  * @openapi
  * components:
@@ -30,6 +38,11 @@ const validar = require(
  *         id:
  *           type: integer
  *           example: 1
+ *
+ *         usuarioId:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
  *
  *         nombre:
  *           type: string
@@ -65,6 +78,11 @@ const validar = require(
  *
  *       properties:
  *
+ *         usuarioId:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *
  *         nombre:
  *           type: string
  *           minLength: 3
@@ -99,6 +117,11 @@ const validar = require(
  *
  *       properties:
  *
+ *         usuarioId:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *
  *         nombre:
  *           type: string
  *           minLength: 3
@@ -130,30 +153,30 @@ const validar = require(
  * @openapi
  * /api/pacientes:
  *   get:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Obtener todos los pacientes
- *
+ *     summary: Obtener todos los pacientes
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     responses:
- *
  *       200:
- *         description:
- *           Lista de pacientes
- *
+ *         description: Lista de pacientes
  *         content:
  *           application/json:
- *
  *             schema:
  *               type: array
- *
  *               items:
  *                 $ref: '#/components/schemas/Paciente'
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  */
 router.get(
   "/",
+  autenticarJWT,
+  autorizarRoles("administrador", "medico"),
   pacientesController.obtenerPacientes
 );
 
@@ -161,53 +184,42 @@ router.get(
  * @openapi
  * /api/pacientes/{id}:
  *   get:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Obtener paciente por ID
- *
+ *     summary: Obtener paciente por ID
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     parameters:
- *
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *           minimum: 1
- *
- *         description:
- *           Identificador único del paciente
- *
+ *         description: Identificador único del paciente
  *     responses:
- *
  *       200:
- *         description:
- *           Paciente encontrado
- *
+ *         description: Paciente encontrado
  *         content:
  *           application/json:
- *
  *             schema:
  *               $ref: '#/components/schemas/Paciente'
- *
  *       400:
- *         description:
- *           ID inválido
- *
+ *         description: ID inválido
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  *       404:
- *         description:
- *           Paciente no encontrado
+ *         description: Paciente no encontrado
  */
 router.get(
   "/:id",
-
+  autenticarJWT,
+  autorizarRoles("administrador", "medico"),
   validarIdPaciente,
-
   validar,
-
   pacientesController.obtenerPacientePorId
 );
 
@@ -215,47 +227,39 @@ router.get(
  * @openapi
  * /api/pacientes:
  *   post:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Crear un paciente
- *
- *     description:
+ *     summary: Crear un paciente
+ *     description: >
  *       Crea un nuevo paciente utilizando únicamente
  *       los campos permitidos por la API.
- *
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
- *
  *           schema:
  *             $ref: '#/components/schemas/PacienteEntrada'
- *
  *     responses:
- *
  *       201:
- *         description:
- *           Paciente creado correctamente
- *
+ *         description: Paciente creado correctamente
  *       400:
- *         description:
- *           Datos inválidos
- *
+ *         description: Datos inválidos
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  *       409:
- *         description:
- *           Ya existe un paciente con ese documento
+ *         description: Conflicto de unicidad o rol de usuario incorrecto
  */
 router.post(
   "/",
-
+  autenticarJWT,
+  autorizarRoles("administrador"),
   validarPaciente,
-
   validar,
-
   pacientesController.crearPaciente
 );
 
@@ -263,65 +267,48 @@ router.post(
  * @openapi
  * /api/pacientes/{id}:
  *   put:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Actualizar completamente un paciente
- *
- *     description:
- *       Actualiza todos los campos editables del paciente.
- *
+ *     summary: Actualizar completamente un paciente
+ *     description: Actualiza todos los campos editables del paciente.
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     parameters:
- *
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *           minimum: 1
- *
- *         description:
- *           Identificador del paciente
- *
+ *         description: Identificador del paciente
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
- *
  *           schema:
  *             $ref: '#/components/schemas/PacienteEntrada'
- *
  *     responses:
- *
  *       200:
- *         description:
- *           Paciente actualizado correctamente
- *
+ *         description: Paciente actualizado correctamente
  *       400:
- *         description:
- *           Datos inválidos
- *
+ *         description: Datos inválidos
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  *       404:
- *         description:
- *           Paciente no encontrado
- *
+ *         description: Paciente no encontrado
  *       409:
- *         description:
- *           El documento pertenece a otro paciente
+ *         description: Conflicto de unicidad o rol de usuario incorrecto
  */
 router.put(
   "/:id",
-
+  autenticarJWT,
+  autorizarRoles("administrador"),
   validarIdPaciente,
-
   validarPaciente,
-
   validar,
-
   pacientesController.actualizarPaciente
 );
 
@@ -329,83 +316,50 @@ router.put(
  * @openapi
  * /api/pacientes/{id}:
  *   patch:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Actualizar parcialmente un paciente
- *
- *     description:
+ *     summary: Actualizar parcialmente un paciente
+ *     description: >
  *       Permite actualizar uno o varios campos del paciente
  *       sin necesidad de enviar el recurso completo.
- *
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     parameters:
- *
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *           minimum: 1
- *
- *         description:
- *           Identificador del paciente
- *
+ *         description: Identificador del paciente
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
- *
  *           schema:
  *             $ref: '#/components/schemas/PacienteActualizacionParcial'
- *
- *           examples:
- *
- *             actualizarNombre:
- *               summary:
- *                 Actualizar solamente el nombre
- *
- *               value:
- *                 nombre: Laura Gómez Pérez
- *
- *             actualizarContacto:
- *               summary:
- *                 Actualizar correo y teléfono
- *
- *               value:
- *                 email: laura.gomez@correo.com
- *                 telefono: "3101112233"
- *
  *     responses:
- *
  *       200:
- *         description:
- *           Paciente actualizado parcialmente
- *
+ *         description: Paciente actualizado parcialmente
  *       400:
- *         description:
- *           Datos inválidos o no se enviaron campos válidos
- *
+ *         description: Datos inválidos o no se enviaron campos válidos
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  *       404:
- *         description:
- *           Paciente no encontrado
- *
+ *         description: Paciente no encontrado
  *       409:
- *         description:
- *           El documento pertenece a otro paciente
+ *         description: Conflicto de unicidad o rol de usuario incorrecto
  */
 router.patch(
   "/:id",
-
+  autenticarJWT,
+  autorizarRoles("administrador"),
   validarIdPaciente,
-
   validarPacienteParcial,
-
   validar,
-
   pacientesController.actualizarPacienteParcial
 );
 
@@ -413,47 +367,40 @@ router.patch(
  * @openapi
  * /api/pacientes/{id}:
  *   delete:
- *
  *     tags:
  *       - Pacientes
- *
- *     summary:
- *       Eliminar paciente
- *
+ *     summary: Eliminar paciente
+ *     security:
+ *       - ApiKeyAuth: []
+ *         BearerAuth: []
  *     parameters:
- *
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *           minimum: 1
- *
- *         description:
- *           Identificador del paciente
- *
+ *         description: Identificador del paciente
  *     responses:
- *
  *       200:
- *         description:
- *           Paciente eliminado correctamente
- *
+ *         description: Paciente eliminado correctamente
  *       400:
- *         description:
- *           ID inválido
- *
+ *         description: ID inválido
+ *       401:
+ *         description: Credenciales de autenticación ausentes o inválidas
+ *       403:
+ *         description: Usuario sin permisos para realizar la operación
  *       404:
- *         description:
- *           Paciente no encontrado
+ *         description: Paciente no encontrado
+ *       409:
+ *         description: No se puede eliminar el paciente porque tiene citas asociadas
  */
 router.delete(
   "/:id",
-
+  autenticarJWT,
+  autorizarRoles("administrador"),
   validarIdPaciente,
-
   validar,
-
   pacientesController.eliminarPaciente
 );
 

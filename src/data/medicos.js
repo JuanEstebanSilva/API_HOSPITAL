@@ -1,6 +1,7 @@
 const medicos = [
   {
     id: 1,
+    usuarioId: null,
     nombre: "Carlos Rodríguez",
     registroMedico: "RM-45871",
     email: "carlos.rodriguez@hospital.com",
@@ -11,6 +12,7 @@ const medicos = [
 
   {
     id: 2,
+    usuarioId: null,
     nombre: "María Fernández",
     registroMedico: "RM-58324",
     email: "maria.fernandez@hospital.com",
@@ -21,6 +23,7 @@ const medicos = [
 
   {
     id: 3,
+    usuarioId: null,
     nombre: "Andrés López",
     registroMedico: "RM-76120",
     email: "andres.lopez@hospital.com",
