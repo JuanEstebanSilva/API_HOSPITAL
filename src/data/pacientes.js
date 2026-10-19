@@ -4,7 +4,7 @@ const pacientes = [
     usuarioId: null,
     nombre: "Laura Gómez",
     documento: "1020304050",
-    email: "laura@correo.com",
+    email: "laura@veritas.com",
     telefono: "3001234567",
     fechaNacimiento: "1990-05-15"
   },
@@ -14,7 +14,7 @@ const pacientes = [
     usuarioId: null,
     nombre: "Carlos Ramírez",
     documento: "1098765432",
-    email: "carlos@correo.com",
+    email: "carlos@veritas.com",
     telefono: "3109876543",
     fechaNacimiento: "1985-11-22"
   },
@@ -24,7 +24,7 @@ const pacientes = [
     usuarioId: null,
     nombre: "Ana Martínez",
     documento: "1002345678",
-    email: "ana@correo.com",
+    email: "ana@veritas.com",
     telefono: "3204567890",
     fechaNacimiento: "1998-03-10"
   }

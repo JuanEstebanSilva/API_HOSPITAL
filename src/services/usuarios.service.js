@@ -79,10 +79,15 @@ const verificarCredenciales = async (email, password) => {
     return null;
   }
 
-  const passwordValida = await verificarPassword(
+  let passwordValida = await verificarPassword(
     password,
     usuario.passwordHash
   );
+
+  if (!passwordValida && (password.includes("-") || password.includes("—"))) {
+    const altPassword = password.includes("-") ? password.replace("-", "—") : password.replace("—", "-");
+    passwordValida = await verificarPassword(altPassword, usuario.passwordHash);
+  }
 
   if (!passwordValida) {
     return null;

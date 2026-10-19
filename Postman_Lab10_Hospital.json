@@ -1,20 +1,20 @@
 {
   "info": {
-    "name": "Lab 10 - API Hospital (Seguridad RBAC y BOLA)",
+    "name": "Lab 10 - Veritas AI (Seguridad RBAC y BOLA)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000"
+      "value": "http://localhost:5000"
     },
     {
       "key": "apiKey",
-      "value": "456b8e73e7d5930f3197c30d307fd5aa0be42672645d0dad48df9e856755088e"
+      "value": "61135a3dc83768741e1c3eb1b8210dc60e78f265fbbe86ddb931a299ab42a3d0"
     },
     {
       "key": "adminPass",
-      "value": "SANTOTO_2026-2"
+      "value": "SANTOTO_2026—2"
     },
     {
       "key": "tokenAdmin",
@@ -50,7 +50,7 @@
     },
     {
       "key": "medicoAId",
-      "value": "4"
+      "value": "2"
     },
     {
       "key": "cita1Id",
@@ -94,7 +94,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@hospital.com\",\n  \"password\": \"{{adminPass}}\"\n}",
+              "raw": "{\n  \"email\": \"admin@veritas.com\",\n  \"password\": \"{{adminPass}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -144,7 +144,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Paciente A\",\n  \"email\": \"paciente.a@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"nombre\": \"Paciente A\",\n  \"email\": \"paciente.a@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -182,7 +182,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"paciente.a@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"email\": \"paciente.a@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -236,7 +236,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"usuarioId\": 2,\n  \"nombre\": \"Paciente A\",\n  \"documento\": \"1000000001\",\n  \"email\": \"paciente.a@hospital.com\",\n  \"telefono\": \"3001234567\",\n  \"fechaNacimiento\": \"1995-05-10\"\n}",
+              "raw": "{\n  \"usuarioId\": 2,\n  \"nombre\": \"Paciente A\",\n  \"documento\": \"1000000001\",\n  \"email\": \"paciente.a@veritas.com\",\n  \"telefono\": \"3001234567\",\n  \"fechaNacimiento\": \"1995-05-10\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -286,7 +286,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Paciente B\",\n  \"email\": \"paciente.b@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"nombre\": \"Paciente B\",\n  \"email\": \"paciente.b@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -324,7 +324,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"paciente.b@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"email\": \"paciente.b@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -378,7 +378,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"usuarioId\": 3,\n  \"nombre\": \"Paciente B\",\n  \"documento\": \"1000000002\",\n  \"email\": \"paciente.b@hospital.com\",\n  \"telefono\": \"3007654321\",\n  \"fechaNacimiento\": \"1998-08-20\"\n}",
+              "raw": "{\n  \"usuarioId\": 3,\n  \"nombre\": \"Paciente B\",\n  \"documento\": \"1000000002\",\n  \"email\": \"paciente.b@veritas.com\",\n  \"telefono\": \"3007654321\",\n  \"fechaNacimiento\": \"1998-08-20\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -428,7 +428,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Paciente Sin Perfil\",\n  \"email\": \"paciente.sinperfil@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"nombre\": \"Paciente Sin Perfil\",\n  \"email\": \"paciente.sinperfil@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -466,7 +466,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"paciente.sinperfil@hospital.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
+              "raw": "{\n  \"email\": \"paciente.sinperfil@veritas.com\",\n  \"password\": \"ClavePaciente2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -520,7 +520,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Médico Seguridad A\",\n  \"email\": \"medico.a@hospital.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
+              "raw": "{\n  \"nombre\": \"Médico Veritas A\",\n  \"email\": \"medico.a@veritas.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -558,7 +558,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"medico.a@hospital.com\",\n  \"password\": \"ClaveMedico2026!\"\n}",
+              "raw": "{\n  \"email\": \"medico.a@veritas.com\",\n  \"password\": \"ClaveMedico2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -612,7 +612,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"usuarioId\": 5,\n  \"nombre\": \"Dr. Alejandro A\",\n  \"registroMedico\": \"RM-99001\",\n  \"email\": \"medico.a@hospital.com\",\n  \"telefono\": \"3101112233\",\n  \"especialidadId\": 1,\n  \"activo\": true\n}",
+              "raw": "{\n  \"usuarioId\": 5,\n  \"nombre\": \"Dr. Alejandro A\",\n  \"registroMedico\": \"RM-99001\",\n  \"email\": \"medico.a@veritas.com\",\n  \"telefono\": \"3101112233\",\n  \"especialidadId\": 1,\n  \"activo\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -627,7 +627,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "const res = pm.response.json();",
-                  "if(res.medico) pm.collectionVariables.set(\"medicoAId\", res.medico.id);"
+                  "const m = res.medico || (res.data && res.data.medico);",
+                  "pm.collectionVariables.set(\"medicoAId\", m ? m.id : 2);"
                 ]
               }
             }
@@ -666,7 +667,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Dr. Sin Perfil\",\n  \"email\": \"medico.sinperfil@hospital.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
+              "raw": "{\n  \"nombre\": \"Dr. Sin Perfil\",\n  \"email\": \"medico.sinperfil@veritas.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -704,7 +705,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"medico.sinperfil@hospital.com\",\n  \"password\": \"ClaveMedico2026!\"\n}",
+              "raw": "{\n  \"email\": \"medico.sinperfil@veritas.com\",\n  \"password\": \"ClaveMedico2026!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -758,7 +759,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pacienteId\": 4,\n  \"medicoId\": 4,\n  \"consultorioId\": 1,\n  \"fecha\": \"2026-11-20\",\n  \"hora\": \"09:00\",\n  \"motivo\": \"Control Paciente A\"\n}",
+              "raw": "{\n  \"pacienteId\": {{pacienteAId}},\n  \"medicoId\": {{medicoAId}},\n  \"consultorioId\": 1,\n  \"fecha\": \"2026-11-20\",\n  \"hora\": \"09:00\",\n  \"motivo\": \"Control Paciente A\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -812,7 +813,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pacienteId\": 5,\n  \"medicoId\": 1,\n  \"consultorioId\": 2,\n  \"fecha\": \"2026-11-21\",\n  \"hora\": \"10:00\",\n  \"motivo\": \"Control Paciente B\"\n}",
+              "raw": "{\n  \"pacienteId\": {{pacienteBId}},\n  \"medicoId\": 1,\n  \"consultorioId\": 2,\n  \"fecha\": \"2026-11-21\",\n  \"hora\": \"10:00\",\n  \"motivo\": \"Control Paciente B\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -983,7 +984,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Test\",\n  \"documento\": \"999999999\",\n  \"email\": \"test@hospital.com\",\n  \"telefono\": \"3001112233\",\n  \"fechaNacimiento\": \"1995-01-01\"\n}",
+              "raw": "{\n  \"nombre\": \"Test\",\n  \"documento\": \"999999999\",\n  \"email\": \"test@veritas.com\",\n  \"telefono\": \"3001112233\",\n  \"fechaNacimiento\": \"1995-01-01\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1071,7 +1072,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Prueba Escalacion\",\n  \"email\": \"escalacion@hospital.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"rol\": \"administrador\"\n}",
+              "raw": "{\n  \"nombre\": \"Prueba Escalacion\",\n  \"email\": \"escalacion_{{$timestamp}}@veritas.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"rol\": \"administrador\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1120,7 +1121,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Prueba Activo\",\n  \"email\": \"activo@hospital.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"activo\": false\n}",
+              "raw": "{\n  \"nombre\": \"Prueba Activo\",\n  \"email\": \"activo_{{$timestamp}}@veritas.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"activo\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1169,7 +1170,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Prueba Hash\",\n  \"email\": \"hash@hospital.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"passwordHash\": \"hash-falso\"\n}",
+              "raw": "{\n  \"nombre\": \"Prueba Hash\",\n  \"email\": \"hash_{{$timestamp}}@veritas.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"passwordHash\": \"hash-falso\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1218,7 +1219,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Prueba SuperAdmin\",\n  \"email\": \"superadmin@hospital.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"esSuperAdmin\": true\n}",
+              "raw": "{\n  \"nombre\": \"Prueba SuperAdmin\",\n  \"email\": \"superadmin_{{$timestamp}}@veritas.com\",\n  \"password\": \"ClavePaciente2026!\",\n  \"esSuperAdmin\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1271,7 +1272,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Otro Doc\",\n  \"email\": \"otrodoc@hospital.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
+              "raw": "{\n  \"nombre\": \"Otro Doc\",\n  \"email\": \"otrodoc@veritas.com\",\n  \"password\": \"ClaveMedico2026!\",\n  \"rol\": \"medico\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

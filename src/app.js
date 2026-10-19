@@ -333,7 +333,7 @@ const iniciarServidor = async () => {
   try {
     await usuariosService.crearAdministradorInicial();
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(
         `Servidor ejecutándose en http://localhost:${PORT}`
       );
@@ -343,6 +343,10 @@ const iniciarServidor = async () => {
       console.log(
         `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
       );
+    });
+
+    server.on("error", (err) => {
+      console.error("Error en el servidor HTTP:", err.message);
     });
   } catch (error) {
     console.error(
