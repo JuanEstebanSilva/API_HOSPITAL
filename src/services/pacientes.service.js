@@ -1,108 +1,222 @@
-const pacientes = require("../data/pacientes");
+const { consultar } = require("../config/database");
 
-const obtenerPacientes = () => {
-  return pacientes;
-};
+// ========================================
+// Columnas estándar con alias camelCase
+// ========================================
+const COLUMNAS_PACIENTE = `
+  id,
+  usuario_id AS "usuarioId",
+  nombre,
+  documento,
+  email,
+  telefono,
+  TO_CHAR(fecha_nacimiento, 'YYYY-MM-DD') AS "fechaNacimiento"
+`;
 
-const obtenerPacientePorId = (id) => {
-  return pacientes.find(
-    paciente => paciente.id === Number(id)
-  );
+// ========================================
+// Obtener todos los pacientes
+// ========================================
+const obtenerPacientes = async () => {
+  const resultado = await consultar(`
+    SELECT ${COLUMNAS_PACIENTE}
+    FROM public.pacientes
+    ORDER BY id
+  `);
+  return resultado.rows;
 };
 
 // ========================================
-// Obtener paciente por usuario
+// Obtener paciente por ID
 // ========================================
-const obtenerPacientePorUsuarioId = (usuarioId) => {
-  return pacientes.find(
-    (paciente) => paciente.usuarioId === Number(usuarioId)
+const obtenerPacientePorId = async (id) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_PACIENTE}
+    FROM public.pacientes
+    WHERE id = $1
+    `,
+    [id]
   );
+  return resultado.rows[0] ?? null;
 };
 
-const buscarPacientePorDocumento = (documento) => {
-  return pacientes.find(
-    paciente => paciente.documento === documento
+// ========================================
+// Obtener paciente por usuario ID
+// ========================================
+const obtenerPacientePorUsuarioId = async (usuarioId) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_PACIENTE}
+    FROM public.pacientes
+    WHERE usuario_id = $1
+    `,
+    [usuarioId]
   );
+  return resultado.rows[0] ?? null;
 };
 
-const crearPaciente = (datos) => {
-  const nuevoId =
-    pacientes.length > 0
-      ? Math.max(...pacientes.map(paciente => paciente.id)) + 1
-      : 1;
-
-  const paciente = {
-    id: nuevoId,
-    usuarioId: datos.usuarioId ?? null,
-    nombre: datos.nombre,
-    documento: datos.documento,
-    email: datos.email,
-    telefono: datos.telefono,
-    fechaNacimiento: datos.fechaNacimiento
-  };
-
-  pacientes.push(paciente);
-  return paciente;
+// ========================================
+// Buscar paciente por documento
+// ========================================
+const buscarPacientePorDocumento = async (documento) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_PACIENTE}
+    FROM public.pacientes
+    WHERE documento = $1
+    `,
+    [documento]
+  );
+  return resultado.rows[0] ?? null;
 };
 
-const actualizarPaciente = (id, datos) => {
-  const indice = pacientes.findIndex(
-    paciente => paciente.id === Number(id)
+// ========================================
+// Buscar paciente por email
+// ========================================
+const buscarPacientePorEmail = async (email) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_PACIENTE}
+    FROM public.pacientes
+    WHERE LOWER(email) = LOWER($1)
+    `,
+    [email]
   );
+  return resultado.rows[0] ?? null;
+};
 
-  if (indice === -1) {
-    return null;
+// ========================================
+// Crear paciente
+// ========================================
+const crearPaciente = async (datos) => {
+  const usuarioId = datos.usuarioId ?? null;
+  const telefono = datos.telefono ?? null;
+
+  const resultado = await consultar(
+    `
+    INSERT INTO public.pacientes (
+      usuario_id,
+      nombre,
+      documento,
+      email,
+      telefono,
+      fecha_nacimiento
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING ${COLUMNAS_PACIENTE}
+    `,
+    [
+      usuarioId,
+      datos.nombre,
+      datos.documento,
+      datos.email.toLowerCase(),
+      telefono,
+      datos.fechaNacimiento
+    ]
+  );
+  return resultado.rows[0];
+};
+
+// ========================================
+// Actualización completa - PUT
+// ========================================
+const actualizarPaciente = async (id, datos) => {
+  const usuarioId = datos.usuarioId !== undefined ? (datos.usuarioId ?? null) : null;
+  const telefono = datos.telefono ?? null;
+
+  const resultado = await consultar(
+    `
+    UPDATE public.pacientes
+    SET
+      usuario_id = $1,
+      nombre = $2,
+      documento = $3,
+      email = $4,
+      telefono = $5,
+      fecha_nacimiento = $6
+    WHERE id = $7
+    RETURNING ${COLUMNAS_PACIENTE}
+    `,
+    [
+      usuarioId,
+      datos.nombre,
+      datos.documento,
+      datos.email.toLowerCase(),
+      telefono,
+      datos.fechaNacimiento,
+      id
+    ]
+  );
+  return resultado.rows[0] ?? null;
+};
+
+// ========================================
+// Actualización parcial - PATCH
+// ========================================
+const actualizarPacienteParcial = async (id, datos) => {
+  const asignaciones = [];
+  const valores = [];
+  let contador = 1;
+
+  if (Object.hasOwn(datos, "usuarioId")) {
+    asignaciones.push(`usuario_id = $${contador++}`);
+    valores.push(datos.usuarioId ?? null);
   }
 
-  pacientes[indice] = {
-    id: pacientes[indice].id,
-    usuarioId: datos.usuarioId !== undefined ? (datos.usuarioId ?? null) : pacientes[indice].usuarioId,
-    nombre: datos.nombre,
-    documento: datos.documento,
-    email: datos.email,
-    telefono: datos.telefono,
-    fechaNacimiento: datos.fechaNacimiento
-  };
-
-  return pacientes[indice];
-};
-
-const eliminarPaciente = (id) => {
-  const indice = pacientes.findIndex(
-    paciente => paciente.id === Number(id)
-  );
-
-  if (indice === -1) {
-    return null;
+  if (Object.hasOwn(datos, "nombre")) {
+    asignaciones.push(`nombre = $${contador++}`);
+    valores.push(datos.nombre);
   }
 
-  const eliminado = pacientes.splice(indice, 1);
-  return eliminado[0];
-};
-
-const actualizarPacienteParcial = (id, datos) => {
-  const indice = pacientes.findIndex(
-    paciente => paciente.id === Number(id)
-  );
-
-  if (indice === -1) {
-    return null;
+  if (Object.hasOwn(datos, "documento")) {
+    asignaciones.push(`documento = $${contador++}`);
+    valores.push(datos.documento);
   }
 
-  const pacienteActual = pacientes[indice];
+  if (Object.hasOwn(datos, "email")) {
+    asignaciones.push(`email = $${contador++}`);
+    valores.push(datos.email.toLowerCase());
+  }
 
-  const pacienteActualizado = {
-    id: pacienteActual.id,
-    usuarioId: datos.usuarioId !== undefined ? (datos.usuarioId ?? null) : pacienteActual.usuarioId,
-    nombre: datos.nombre ?? pacienteActual.nombre,
-    documento: datos.documento ?? pacienteActual.documento,
-    email: datos.email ?? pacienteActual.email,
-    telefono: datos.telefono ?? pacienteActual.telefono,
-    fechaNacimiento: datos.fechaNacimiento ?? pacienteActual.fechaNacimiento
-  };
+  if (Object.hasOwn(datos, "telefono")) {
+    asignaciones.push(`telefono = $${contador++}`);
+    valores.push(datos.telefono ?? null);
+  }
 
-  pacientes[indice] = pacienteActualizado;
-  return pacienteActualizado;
+  if (Object.hasOwn(datos, "fechaNacimiento")) {
+    asignaciones.push(`fecha_nacimiento = $${contador++}`);
+    valores.push(datos.fechaNacimiento);
+  }
+
+  if (asignaciones.length === 0) {
+    return obtenerPacientePorId(id);
+  }
+
+  valores.push(id);
+  const sql = `
+    UPDATE public.pacientes
+    SET ${asignaciones.join(", ")}
+    WHERE id = $${contador}
+    RETURNING ${COLUMNAS_PACIENTE}
+  `;
+
+  const resultado = await consultar(sql, valores);
+  return resultado.rows[0] ?? null;
+};
+
+// ========================================
+// Eliminar paciente
+// ========================================
+const eliminarPaciente = async (id) => {
+  const resultado = await consultar(
+    `
+    DELETE FROM public.pacientes
+    WHERE id = $1
+    RETURNING ${COLUMNAS_PACIENTE}
+    `,
+    [id]
+  );
+  return resultado.rows[0] ?? null;
 };
 
 module.exports = {
@@ -110,6 +224,7 @@ module.exports = {
   obtenerPacientePorId,
   obtenerPacientePorUsuarioId,
   buscarPacientePorDocumento,
+  buscarPacientePorEmail,
   crearPaciente,
   actualizarPaciente,
   actualizarPacienteParcial,

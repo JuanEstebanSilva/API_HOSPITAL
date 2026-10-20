@@ -1,4 +1,4 @@
-const usuarios = require("../data/usuarios");
+const { consultar } = require("../config/database");
 const {
   generarPasswordHash,
   verificarPassword
@@ -7,45 +7,66 @@ const {
 // ========================================
 // Obtener usuario por email
 // ========================================
-const obtenerUsuarioPorEmail = (email) => {
-  return usuarios.find(
-    (usuario) =>
-      usuario.email.toLowerCase() === email.toLowerCase()
+const obtenerUsuarioPorEmail = async (email) => {
+  const resultado = await consultar(
+    `
+    SELECT u.id, u.auth_user_id AS "authUserId", u.rol_id AS "rolId",
+           u.nombre, u.email, u.password_hash AS "passwordHash",
+           u.activo, u.fecha_registro AS "fechaRegistro",
+           r.nombre AS rol
+    FROM public.usuarios u
+    JOIN public.roles r ON u.rol_id = r.id
+    WHERE LOWER(u.email) = LOWER($1)
+    `,
+    [email]
   );
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
 // Obtener usuario por ID
 // ========================================
-const obtenerUsuarioPorId = (id) => {
-  return usuarios.find(
-    (usuario) => usuario.id === Number(id)
+const obtenerUsuarioPorId = async (id) => {
+  const resultado = await consultar(
+    `
+    SELECT u.id, u.auth_user_id AS "authUserId", u.rol_id AS "rolId",
+           u.nombre, u.email, u.password_hash AS "passwordHash",
+           u.activo, u.fecha_registro AS "fechaRegistro",
+           r.nombre AS rol
+    FROM public.usuarios u
+    JOIN public.roles r ON u.rol_id = r.id
+    WHERE u.id = $1
+    `,
+    [id]
   );
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Crear usuario (Registro público)
+// Crear usuario (Registro público - rol 'paciente')
 // ========================================
 const crearUsuario = async (datos) => {
   const passwordHash = await generarPasswordHash(datos.password);
 
-  const nuevoUsuario = {
-    id:
-      usuarios.length > 0
-        ? Math.max(...usuarios.map((usuario) => usuario.id)) + 1
-        : 1,
-    nombre: datos.nombre,
-    email: datos.email.toLowerCase(),
-    passwordHash,
-    // ====================================
-    // Valores controlados por el servidor
-    // ====================================
-    rol: "paciente",
-    activo: true
-  };
+  const rolRes = await consultar(
+    `SELECT id FROM public.roles WHERE LOWER(nombre) = 'paciente'`
+  );
+  const rolId = rolRes.rows[0]?.id || 3;
 
-  usuarios.push(nuevoUsuario);
-  return nuevoUsuario;
+  const resultado = await consultar(
+    `
+    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
+    VALUES ($1, $2, $3, $4, TRUE)
+    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
+              nombre, email, password_hash AS "passwordHash",
+              activo, fecha_registro AS "fechaRegistro"
+    `,
+    [rolId, datos.nombre, datos.email.toLowerCase(), passwordHash]
+  );
+
+  const usuario = resultado.rows[0];
+  usuario.rol = "paciente";
+  return usuario;
 };
 
 // ========================================
@@ -54,27 +75,41 @@ const crearUsuario = async (datos) => {
 const crearUsuarioAdministrativo = async (datos) => {
   const passwordHash = await generarPasswordHash(datos.password);
 
-  const nuevoUsuario = {
-    id:
-      usuarios.length > 0
-        ? Math.max(...usuarios.map((usuario) => usuario.id)) + 1
-        : 1,
-    nombre: datos.nombre,
-    email: datos.email.toLowerCase(),
-    passwordHash,
-    rol: datos.rol,
-    activo: true
-  };
+  const rolRes = await consultar(
+    `SELECT id, nombre FROM public.roles WHERE LOWER(nombre) = LOWER($1)`,
+    [datos.rol]
+  );
 
-  usuarios.push(nuevoUsuario);
-  return nuevoUsuario;
+  if (rolRes.rows.length === 0) {
+    const error = new Error(`El rol especificado '${datos.rol}' no existe`);
+    error.status = 400;
+    throw error;
+  }
+
+  const rolId = rolRes.rows[0].id;
+  const rolNombre = rolRes.rows[0].nombre;
+
+  const resultado = await consultar(
+    `
+    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
+    VALUES ($1, $2, $3, $4, TRUE)
+    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
+              nombre, email, password_hash AS "passwordHash",
+              activo, fecha_registro AS "fechaRegistro"
+    `,
+    [rolId, datos.nombre, datos.email.toLowerCase(), passwordHash]
+  );
+
+  const usuario = resultado.rows[0];
+  usuario.rol = rolNombre;
+  return usuario;
 };
 
 // ========================================
 // Verificar credenciales
 // ========================================
 const verificarCredenciales = async (email, password) => {
-  const usuario = obtenerUsuarioPorEmail(email);
+  const usuario = await obtenerUsuarioPorEmail(email);
   if (!usuario) {
     return null;
   }
@@ -85,7 +120,9 @@ const verificarCredenciales = async (email, password) => {
   );
 
   if (!passwordValida && (password.includes("-") || password.includes("—"))) {
-    const altPassword = password.includes("-") ? password.replace("-", "—") : password.replace("—", "-");
+    const altPassword = password.includes("-")
+      ? password.replace("-", "—")
+      : password.replace("—", "-");
     passwordValida = await verificarPassword(altPassword, usuario.passwordHash);
   }
 
@@ -109,27 +146,32 @@ const crearAdministradorInicial = async () => {
     return null;
   }
 
-  const existente = obtenerUsuarioPorEmail(email);
+  const existente = await obtenerUsuarioPorEmail(email);
   if (existente) {
     return existente;
   }
 
+  const rolRes = await consultar(
+    `SELECT id FROM public.roles WHERE LOWER(nombre) = 'administrador'`
+  );
+  const rolId = rolRes.rows[0]?.id || 1;
+
   const passwordHash = await generarPasswordHash(password);
 
-  const administrador = {
-    id:
-      usuarios.length > 0
-        ? Math.max(...usuarios.map((usuario) => usuario.id)) + 1
-        : 1,
-    nombre,
-    email: email.toLowerCase(),
-    passwordHash,
-    rol: "administrador",
-    activo: true
-  };
+  const resultado = await consultar(
+    `
+    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
+    VALUES ($1, $2, $3, $4, TRUE)
+    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
+              nombre, email, password_hash AS "passwordHash",
+              activo, fecha_registro AS "fechaRegistro"
+    `,
+    [rolId, nombre, email.toLowerCase(), passwordHash]
+  );
 
-  usuarios.push(administrador);
-  console.log("Administrador inicial creado");
+  console.log("Administrador inicial creado en PostgreSQL");
+  const administrador = resultado.rows[0];
+  administrador.rol = "administrador";
   return administrador;
 };
 

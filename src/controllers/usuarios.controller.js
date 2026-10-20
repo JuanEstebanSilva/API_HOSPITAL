@@ -10,28 +10,22 @@ const crearUsuario = async (req, res, next) => {
       locations: ["body"]
     });
 
-    // ------------------------------------
     // Verificar email duplicado
-    // ------------------------------------
-    const usuarioExistente = usuariosService.obtenerUsuarioPorEmail(
+    const usuarioExistente = await usuariosService.obtenerUsuarioPorEmail(
       datos.email
     );
+
     if (usuarioExistente) {
       return res.status(409).json({
         mensaje: "Ya existe un usuario con ese correo electrónico"
       });
     }
 
-    // ------------------------------------
-    // Crear usuario
-    // ------------------------------------
+    // Crear usuario administrativo
     const usuario = await usuariosService.crearUsuarioAdministrativo(
       datos
     );
 
-    // ------------------------------------
-    // Respuesta segura
-    // ------------------------------------
     return res.status(201).json({
       mensaje: "Usuario creado correctamente",
       usuario: {
@@ -43,6 +37,11 @@ const crearUsuario = async (req, res, next) => {
       }
     });
   } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({
+        mensaje: "Ya existe un usuario con ese correo electrónico"
+      });
+    }
     next(error);
   }
 };

@@ -329,32 +329,41 @@ app.use(
 // Servidor
 // ========================================
 
-const iniciarServidor = async () => {
-  try {
-    await usuariosService.crearAdministradorInicial();
+const iniciarServidor = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      await usuariosService.crearAdministradorInicial();
 
-    const server = app.listen(PORT, "0.0.0.0", () => {
-      console.log(
-        `Servidor ejecutándose en http://localhost:${PORT}`
-      );
-      console.log(
-        `Swagger UI: http://localhost:${PORT}/api-docs`
-      );
-      console.log(
-        `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
-      );
-    });
+      const server = app.listen(PORT, "0.0.0.0", () => {
+        console.log(
+          `Servidor ejecutándose en http://localhost:${PORT}`
+        );
+        console.log(
+          `Swagger UI: http://localhost:${PORT}/api-docs`
+        );
+        console.log(
+          `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
+        );
+        resolve(server);
+      });
 
-    server.on("error", (err) => {
-      console.error("Error en el servidor HTTP:", err.message);
-    });
-  } catch (error) {
-    console.error(
-      "Error al iniciar el servidor:",
-      error.message
-    );
-    process.exit(1);
-  }
+      server.on("error", (err) => {
+        console.error("Error en el servidor HTTP:", err.message);
+        reject(err);
+      });
+    } catch (error) {
+      console.error(
+        "Error al iniciar el servidor:",
+        error.message
+      );
+      process.exit(1);
+    }
+  });
 };
 
-iniciarServidor();
+if (require.main === module) {
+  iniciarServidor();
+}
+
+module.exports = { app, iniciarServidor };
+

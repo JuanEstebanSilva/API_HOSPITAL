@@ -1,184 +1,136 @@
-const especialidades =
-  require("../data/especialidades");
+const { consultar } = require("../config/database");
 
 // ========================================
-// Obtener todas
+// Obtener todas las especialidades
 // ========================================
-
-const obtenerEspecialidades = () => {
-  return especialidades;
+const obtenerEspecialidades = async () => {
+  const resultado = await consultar(`
+    SELECT id, nombre, descripcion, activa
+    FROM public.especialidades
+    ORDER BY id
+  `);
+  return resultado.rows;
 };
 
 // ========================================
-// Obtener por ID
+// Obtener especialidad por ID
 // ========================================
-
-const obtenerEspecialidadPorId = (
-  id
-) => {
-  return especialidades.find(
-    especialidad =>
-      especialidad.id === Number(id)
+const obtenerEspecialidadPorId = async (id) => {
+  const resultado = await consultar(
+    `
+    SELECT id, nombre, descripcion, activa
+    FROM public.especialidades
+    WHERE id = $1
+    `,
+    [id]
   );
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Buscar por nombre
+// Buscar especialidad por nombre (Case-Insensitive)
 // ========================================
-
-const buscarEspecialidadPorNombre = (
-  nombre
-) => {
-  return especialidades.find(
-    especialidad =>
-      especialidad.nombre.toLowerCase() ===
-      nombre.toLowerCase()
+const buscarEspecialidadPorNombre = async (nombre) => {
+  const resultado = await consultar(
+    `
+    SELECT id, nombre, descripcion, activa
+    FROM public.especialidades
+    WHERE LOWER(nombre) = LOWER($1)
+    `,
+    [nombre]
   );
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Crear
+// Crear especialidad
 // ========================================
+const crearEspecialidad = async (datos) => {
+  const activa = datos.activa !== undefined ? datos.activa : true;
+  const descripcion = datos.descripcion ?? null;
 
-const crearEspecialidad = (
-  datos
-) => {
-  const nuevoId =
-    especialidades.length > 0
-      ? Math.max(
-          ...especialidades.map(
-            especialidad =>
-              especialidad.id
-          )
-        ) + 1
-      : 1;
-
-  const especialidad = {
-    id: nuevoId,
-
-    nombre:
-      datos.nombre,
-
-    descripcion:
-      datos.descripcion,
-
-    activa:
-      datos.activa
-  };
-
-  especialidades.push(
-    especialidad
+  const resultado = await consultar(
+    `
+    INSERT INTO public.especialidades (nombre, descripcion, activa)
+    VALUES ($1, $2, $3)
+    RETURNING id, nombre, descripcion, activa
+    `,
+    [datos.nombre, descripcion, activa]
   );
-
-  return especialidad;
+  return resultado.rows[0];
 };
 
 // ========================================
 // Actualización completa - PUT
 // ========================================
+const actualizarEspecialidad = async (id, datos) => {
+  const activa = datos.activa !== undefined ? datos.activa : true;
+  const descripcion = datos.descripcion ?? null;
 
-const actualizarEspecialidad = (
-  id,
-  datos
-) => {
-  const indice =
-    especialidades.findIndex(
-      especialidad =>
-        especialidad.id ===
-        Number(id)
-    );
-
-  if (indice === -1) {
-    return null;
-  }
-
-  especialidades[indice] = {
-    id:
-      especialidades[indice].id,
-
-    nombre:
-      datos.nombre,
-
-    descripcion:
-      datos.descripcion,
-
-    activa:
-      datos.activa
-  };
-
-  return especialidades[indice];
+  const resultado = await consultar(
+    `
+    UPDATE public.especialidades
+    SET nombre = $1, descripcion = $2, activa = $3
+    WHERE id = $4
+    RETURNING id, nombre, descripcion, activa
+    `,
+    [datos.nombre, descripcion, activa, id]
+  );
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
 // Actualización parcial - PATCH
 // ========================================
+const actualizarEspecialidadParcial = async (id, datos) => {
+  const asignaciones = [];
+  const valores = [];
+  let contador = 1;
 
-const actualizarEspecialidadParcial = (
-  id,
-  datos
-) => {
-  const indice =
-    especialidades.findIndex(
-      especialidad =>
-        especialidad.id ===
-        Number(id)
-    );
-
-  if (indice === -1) {
-    return null;
+  if (Object.hasOwn(datos, "nombre")) {
+    asignaciones.push(`nombre = $${contador++}`);
+    valores.push(datos.nombre);
   }
 
-  const especialidadActual =
-    especialidades[indice];
+  if (Object.hasOwn(datos, "descripcion")) {
+    asignaciones.push(`descripcion = $${contador++}`);
+    valores.push(datos.descripcion);
+  }
 
-  const especialidadActualizada = {
-    id:
-      especialidadActual.id,
+  if (Object.hasOwn(datos, "activa")) {
+    asignaciones.push(`activa = $${contador++}`);
+    valores.push(datos.activa);
+  }
 
-    nombre:
-      datos.nombre ??
-      especialidadActual.nombre,
+  if (asignaciones.length === 0) {
+    return obtenerEspecialidadPorId(id);
+  }
 
-    descripcion:
-      datos.descripcion ??
-      especialidadActual.descripcion,
+  valores.push(id);
+  const sql = `
+    UPDATE public.especialidades
+    SET ${asignaciones.join(", ")}
+    WHERE id = $${contador}
+    RETURNING id, nombre, descripcion, activa
+  `;
 
-    activa:
-      datos.activa ??
-      especialidadActual.activa
-  };
-
-  especialidades[indice] =
-    especialidadActualizada;
-
-  return especialidadActualizada;
+  const resultado = await consultar(sql, valores);
+  return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Eliminar
+// Eliminar especialidad
 // ========================================
-
-const eliminarEspecialidad = (
-  id
-) => {
-  const indice =
-    especialidades.findIndex(
-      especialidad =>
-        especialidad.id ===
-        Number(id)
-    );
-
-  if (indice === -1) {
-    return null;
-  }
-
-  const eliminada =
-    especialidades.splice(
-      indice,
-      1
-    );
-
-  return eliminada[0];
+const eliminarEspecialidad = async (id) => {
+  const resultado = await consultar(
+    `
+    DELETE FROM public.especialidades
+    WHERE id = $1
+    RETURNING id, nombre, descripcion, activa
+    `,
+    [id]
+  );
+  return resultado.rows[0] ?? null;
 };
 
 module.exports = {

@@ -1,244 +1,170 @@
-const consultorios =
-  require("../data/consultorios");
+const { consultar } = require("../config/database");
 
+// ========================================
+// Columnas estándar
+// ========================================
+const COLUMNAS_CONSULTORIO = `
+  id,
+  codigo,
+  nombre,
+  piso,
+  ubicacion,
+  activo
+`;
 
 // ========================================
 // Obtener todos
 // ========================================
-
-const obtenerConsultorios = () => {
-  return consultorios;
+const obtenerConsultorios = async () => {
+  const resultado = await consultar(`
+    SELECT ${COLUMNAS_CONSULTORIO}
+    FROM public.consultorios
+    ORDER BY id
+  `);
+  return resultado.rows;
 };
-
 
 // ========================================
 // Obtener por ID
 // ========================================
-
-const obtenerConsultorioPorId = (
-  id
-) => {
-
-  return consultorios.find(
-    consultorio =>
-      consultorio.id === Number(id)
+const obtenerConsultorioPorId = async (id) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_CONSULTORIO}
+    FROM public.consultorios
+    WHERE id = $1
+    `,
+    [id]
   );
+  return resultado.rows[0] ?? null;
 };
 
-
 // ========================================
-// Buscar por código
+// Buscar por código (Case-Insensitive)
 // ========================================
-
-const buscarConsultorioPorCodigo = (
-  codigo
-) => {
-
-  return consultorios.find(
-    consultorio =>
-      consultorio.codigo
-        .toLowerCase() ===
-      codigo
-        .toLowerCase()
+const buscarConsultorioPorCodigo = async (codigo) => {
+  const resultado = await consultar(
+    `
+    SELECT ${COLUMNAS_CONSULTORIO}
+    FROM public.consultorios
+    WHERE LOWER(codigo) = LOWER($1)
+    `,
+    [codigo]
   );
+  return resultado.rows[0] ?? null;
 };
-
 
 // ========================================
 // Crear consultorio
 // ========================================
+const crearConsultorio = async (datos) => {
+  const ubicacion = datos.ubicacion ?? null;
+  const activo = datos.activo !== undefined ? datos.activo : true;
 
-const crearConsultorio = (
-  datos
-) => {
-
-  const nuevoId =
-    consultorios.length > 0
-      ? Math.max(
-          ...consultorios.map(
-            consultorio =>
-              consultorio.id
-          )
-        ) + 1
-      : 1;
-
-
-  const consultorio = {
-
-    id:
-      nuevoId,
-
-    codigo:
-      datos.codigo,
-
-    nombre:
-      datos.nombre,
-
-    piso:
-      datos.piso,
-
-    ubicacion:
-      datos.ubicacion,
-
-    activo:
-      datos.activo
-  };
-
-
-  consultorios.push(
-    consultorio
+  const resultado = await consultar(
+    `
+    INSERT INTO public.consultorios (
+      codigo,
+      nombre,
+      piso,
+      ubicacion,
+      activo
+    )
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING ${COLUMNAS_CONSULTORIO}
+    `,
+    [datos.codigo, datos.nombre, datos.piso, ubicacion, activo]
   );
-
-
-  return consultorio;
+  return resultado.rows[0];
 };
 
+// ========================================
+// PUT - Actualización completa
+// ========================================
+const actualizarConsultorio = async (id, datos) => {
+  const ubicacion = datos.ubicacion ?? null;
+  const activo = datos.activo !== undefined ? datos.activo : true;
+
+  const resultado = await consultar(
+    `
+    UPDATE public.consultorios
+    SET
+      codigo = $1,
+      nombre = $2,
+      piso = $3,
+      ubicacion = $4,
+      activo = $5
+    WHERE id = $6
+    RETURNING ${COLUMNAS_CONSULTORIO}
+    `,
+    [datos.codigo, datos.nombre, datos.piso, ubicacion, activo, id]
+  );
+  return resultado.rows[0] ?? null;
+};
 
 // ========================================
-// PUT
-// Actualización completa
+// PATCH - Actualización parcial
 // ========================================
+const actualizarConsultorioParcial = async (id, datos) => {
+  const asignaciones = [];
+  const valores = [];
+  let contador = 1;
 
-const actualizarConsultorio = (
-  id,
-  datos
-) => {
-
-  const indice =
-    consultorios.findIndex(
-      consultorio =>
-        consultorio.id === Number(id)
-    );
-
-
-  if (
-    indice === -1
-  ) {
-    return null;
+  if (Object.hasOwn(datos, "codigo")) {
+    asignaciones.push(`codigo = $${contador++}`);
+    valores.push(datos.codigo);
   }
 
-
-  consultorios[indice] = {
-
-    id:
-      consultorios[indice].id,
-
-    codigo:
-      datos.codigo,
-
-    nombre:
-      datos.nombre,
-
-    piso:
-      datos.piso,
-
-    ubicacion:
-      datos.ubicacion,
-
-    activo:
-      datos.activo
-  };
-
-
-  return consultorios[indice];
-};
-
-
-// ========================================
-// PATCH
-// Actualización parcial
-// ========================================
-
-const actualizarConsultorioParcial = (
-  id,
-  datos
-) => {
-
-  const indice =
-    consultorios.findIndex(
-      consultorio =>
-        consultorio.id === Number(id)
-    );
-
-
-  if (
-    indice === -1
-  ) {
-    return null;
+  if (Object.hasOwn(datos, "nombre")) {
+    asignaciones.push(`nombre = $${contador++}`);
+    valores.push(datos.nombre);
   }
 
-
-  const consultorioActual =
-    consultorios[indice];
-
-
-  const consultorioActualizado = {
-
-    id:
-      consultorioActual.id,
-
-    codigo:
-      datos.codigo ??
-      consultorioActual.codigo,
-
-    nombre:
-      datos.nombre ??
-      consultorioActual.nombre,
-
-    piso:
-      datos.piso ??
-      consultorioActual.piso,
-
-    ubicacion:
-      datos.ubicacion ??
-      consultorioActual.ubicacion,
-
-    activo:
-      datos.activo ??
-      consultorioActual.activo
-  };
-
-
-  consultorios[indice] =
-    consultorioActualizado;
-
-
-  return consultorioActualizado;
-};
-
-
-// ========================================
-// Eliminar
-// ========================================
-
-const eliminarConsultorio = (
-  id
-) => {
-
-  const indice =
-    consultorios.findIndex(
-      consultorio =>
-        consultorio.id === Number(id)
-    );
-
-
-  if (
-    indice === -1
-  ) {
-    return null;
+  if (Object.hasOwn(datos, "piso")) {
+    asignaciones.push(`piso = $${contador++}`);
+    valores.push(datos.piso);
   }
 
+  if (Object.hasOwn(datos, "ubicacion")) {
+    asignaciones.push(`ubicacion = $${contador++}`);
+    valores.push(datos.ubicacion ?? null);
+  }
 
-  const eliminado =
-    consultorios.splice(
-      indice,
-      1
-    );
+  if (Object.hasOwn(datos, "activo")) {
+    asignaciones.push(`activo = $${contador++}`);
+    valores.push(datos.activo);
+  }
 
+  if (asignaciones.length === 0) {
+    return obtenerConsultorioPorId(id);
+  }
 
-  return eliminado[0];
+  valores.push(id);
+  const sql = `
+    UPDATE public.consultorios
+    SET ${asignaciones.join(", ")}
+    WHERE id = $${contador}
+    RETURNING ${COLUMNAS_CONSULTORIO}
+  `;
+
+  const resultado = await consultar(sql, valores);
+  return resultado.rows[0] ?? null;
 };
 
+// ========================================
+// Eliminar consultorio
+// ========================================
+const eliminarConsultorio = async (id) => {
+  const resultado = await consultar(
+    `
+    DELETE FROM public.consultorios
+    WHERE id = $1
+    RETURNING ${COLUMNAS_CONSULTORIO}
+    `,
+    [id]
+  );
+  return resultado.rows[0] ?? null;
+};
 
 module.exports = {
   obtenerConsultorios,
