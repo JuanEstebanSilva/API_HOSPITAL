@@ -5,7 +5,9 @@
   "main": "src/app.js",
   "scripts": {
     "dev": "node --watch src/app.js",
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "test": "node scripts/validar-bloques-7.js",
+    "test:db": "node scripts/probar-conexion.js"
   },
   "keywords": [
     "hospital",
