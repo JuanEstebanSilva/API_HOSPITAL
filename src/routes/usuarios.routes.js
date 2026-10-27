@@ -1,13 +1,31 @@
 const express = require("express");
+
 const {
   crearUsuario
-} = require("../controllers/usuarios.controller");
+} = require(
+  "../controllers/usuarios.controller"
+);
+
 const {
   validarCreacionUsuario
-} = require("../middlewares/usuarios.validator");
-const validar = require("../middlewares/validar.middleware");
-const autenticarJWT = require("../middlewares/auth.middleware");
-const autorizarRoles = require("../middlewares/roles.middleware");
+} = require(
+  "../middlewares/usuarios.validator"
+);
+
+const validar =
+  require(
+    "../middlewares/validar.middleware"
+  );
+
+const autenticarJWT =
+  require(
+    "../middlewares/auth.middleware"
+  );
+
+const autorizarRoles =
+  require(
+    "../middlewares/roles.middleware"
+  );
 
 const router = express.Router();
 
@@ -75,10 +93,17 @@ const router = express.Router();
  */
 router.post(
   "/",
+
   autenticarJWT,
-  autorizarRoles("administrador"),
+
+  autorizarRoles(
+    "administrador"
+  ),
+
   validarCreacionUsuario,
+
   validar,
+
   crearUsuario
 );
 

@@ -1,29 +1,57 @@
+
 const { matchedData } = require("express-validator");
-const usuariosService = require("../services/usuarios.service");
-const { generarToken } = require("../utils/jwt.util");
+
+const usuariosService =
+  require("../services/usuarios.service");
+
+const { generarToken } =
+  require("../utils/jwt.util");
+
+// ========================================
+// Manejo de errores
+// ========================================
+
+const manejarErrorUsuario = (error, res, next) => {
+  if (error.code === "23505") {
+    return res.status(409).json({
+      mensaje:
+        "Ya existe un usuario con ese correo electrónico"
+    });
+  }
+
+  if (error.codigoAplicacion === "ROL_INVALIDO") {
+    return res.status(400).json({
+      mensaje: error.message
+    });
+  }
+
+  return next(error);
+};
 
 // ========================================
 // Registro público
 // ========================================
+
 const registrar = async (req, res, next) => {
   try {
     const datos = matchedData(req, {
       locations: ["body"]
     });
 
-    // Verificar email duplicado
-    const usuarioExistente = await usuariosService.obtenerUsuarioPorEmail(
-      datos.email
-    );
+    const usuarioExistente =
+      await usuariosService.obtenerUsuarioPorEmail(
+        datos.email
+      );
 
     if (usuarioExistente) {
       return res.status(409).json({
-        mensaje: "Ya existe un usuario con ese correo electrónico"
+        mensaje:
+          "Ya existe un usuario con ese correo electrónico"
       });
     }
 
-    // Crear usuario con rol 'paciente'
-    const usuario = await usuariosService.crearUsuario(datos);
+    const usuario =
+      await usuariosService.crearUsuario(datos);
 
     return res.status(201).json({
       mensaje: "Usuario registrado correctamente",
@@ -36,44 +64,38 @@ const registrar = async (req, res, next) => {
       }
     });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({
-        mensaje: "Ya existe un usuario con ese correo electrónico"
-      });
-    }
-    next(error);
+    return manejarErrorUsuario(error, res, next);
   }
 };
 
 // ========================================
 // Login
 // ========================================
+
 const login = async (req, res, next) => {
   try {
     const datos = matchedData(req, {
       locations: ["body"]
     });
 
-    const usuario = await usuariosService.verificarCredenciales(
-      datos.email,
-      datos.password
-    );
+    const usuario =
+      await usuariosService.verificarCredenciales(
+        datos.email,
+        datos.password
+      );
 
-    // Credenciales incorrectas
     if (!usuario) {
       return res.status(401).json({
         mensaje: "Credenciales inválidas"
       });
     }
 
-    // Usuario deshabilitado
     if (!usuario.activo) {
       return res.status(403).json({
         mensaje: "Usuario deshabilitado"
       });
     }
 
-    // Generar JWT
     const token = generarToken(usuario);
 
     return res.status(200).json({
@@ -87,7 +109,7 @@ const login = async (req, res, next) => {
       token
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 

@@ -1,14 +1,21 @@
-const { verificarToken } = require("../utils/jwt.util");
+
+const {
+  verificarToken
+} = require("../utils/jwt.util");
+
+const usuariosService =
+  require("../services/usuarios.service");
 
 // ========================================
-// Autenticar mediante JWT
+// Autenticar mediante JWT + PostgreSQL
 // ========================================
-const autenticarJWT = (req, res, next) => {
-  // --------------------------------------
-  // Obtener Header (compatible con minúsculas y mayúsculas)
-  // --------------------------------------
-  const authorization =
-    req.get("authorization") || req.get("Authorization");
+
+const autenticarJWT = async (req, res, next) => {
+  const authorization = req.get("Authorization");
+
+  // ======================================
+  // Header ausente
+  // ======================================
 
   if (!authorization) {
     return res.status(401).json({
@@ -16,56 +23,97 @@ const autenticarJWT = (req, res, next) => {
     });
   }
 
-  // --------------------------------------
-  // Normalizar y extraer el token limpio
-  // Evita fallos si Swagger envía "Bearer Bearer <token>" o solo "<token>"
-  // --------------------------------------
-  let token = authorization.trim();
+  // ======================================
+  // Validar formato Bearer
+  // ======================================
 
-  // Si incluye 'Bearer', extrae solo la porción del token real
-  if (token.toLowerCase().startsWith("bearer")) {
-    token = token.replace(/^bearer\s+/i, "").trim();
-    // Por si en Swagger pegaron "Bearer" dos veces
-    if (token.toLowerCase().startsWith("bearer")) {
-      token = token.replace(/^bearer\s+/i, "").trim();
-    }
-  }
+  const partes = authorization.trim().split(/\s+/);
 
-  if (!token) {
+  if (
+    partes.length !== 2 ||
+    partes[0] !== "Bearer" ||
+    !partes[1]
+  ) {
     return res.status(401).json({
       mensaje: "Formato de token inválido"
     });
   }
 
   try {
-    // ------------------------------------
+    // ====================================
     // Verificar firma y expiración
-    // ------------------------------------
-    const payload = verificarToken(token);
+    // ====================================
 
-    // ------------------------------------
-    // Asociar usuario a la petición
-    // ------------------------------------
+    const payload = verificarToken(partes[1]);
+
+    // ====================================
+    // Verificar identificador
+    // ====================================
+
+    if (
+      typeof payload.sub !== "string" ||
+      !/^[1-9]\d*$/.test(payload.sub)
+    ) {
+      return res.status(401).json({
+        mensaje: "Token inválido"
+      });
+    }
+
+    // ====================================
+    // Consultar identidad real
+    // ====================================
+
+    const usuario =
+      await usuariosService.obtenerUsuarioPorId(
+        payload.sub
+      );
+
+    if (!usuario) {
+      return res.status(401).json({
+        mensaje:
+          "La cuenta asociada al token no existe"
+      });
+    }
+
+    // ====================================
+    // Comprobar estado de cuenta
+    // ====================================
+
+    if (!usuario.activo) {
+      return res.status(403).json({
+        mensaje: "Usuario deshabilitado"
+      });
+    }
+
+    // ====================================
+    // Utilizar rol vigente en PostgreSQL
+    // ====================================
+
     req.usuario = {
-      id: Number(payload.sub),
-      email: payload.email,
-      rol: payload.rol
+      id: String(usuario.id),
+      email: usuario.email,
+      rol: usuario.rol
     };
 
-    next();
-  } catch (error) {
-    // Imprime en terminal la causa exacta (firma inválida, secreto incorrecto, etc.)
-    console.error("Fallo al verificar JWT:", error.message);
+    return next();
 
+  } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         mensaje: "Token expirado"
       });
     }
 
-    return res.status(401).json({
-      mensaje: "Token inválido"
-    });
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "NotBeforeError"
+    ) {
+      return res.status(401).json({
+        mensaje: "Token inválido"
+      });
+    }
+
+    return next(error);
   }
 };
 

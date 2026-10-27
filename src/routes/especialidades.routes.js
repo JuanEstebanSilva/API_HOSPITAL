@@ -1,10 +1,37 @@
-const express = require("express");
+// ========================================
+// Importaciones
+// ========================================
 
-const router = express.Router();
+const express =
+  require("express");
 
-const especialidadesController = require(
-  "../controllers/especialidades.controller"
-);
+const router =
+  express.Router();
+
+const especialidadesController =
+  require(
+    "../controllers/especialidades.controller"
+  );
+
+
+// ========================================
+// Autenticación y autorización
+// ========================================
+
+const autenticarJWT =
+  require(
+    "../middlewares/auth.middleware"
+  );
+
+const autorizarRoles =
+  require(
+    "../middlewares/roles.middleware"
+  );
+
+
+// ========================================
+// Validadores
+// ========================================
 
 const {
   validarIdEspecialidad,
@@ -14,17 +41,15 @@ const {
   "../middlewares/especialidades.validator"
 );
 
-const validar = require(
-  "../middlewares/validar.middleware"
-);
+const validar =
+  require(
+    "../middlewares/validar.middleware"
+  );
 
-const autenticarJWT = require(
-  "../middlewares/auth.middleware"
-);
 
-const autorizarRoles = require(
-  "../middlewares/roles.middleware"
-);
+// ========================================
+// Swagger - Schemas
+// ========================================
 
 /**
  * @openapi
@@ -99,36 +124,73 @@ const autorizarRoles = require(
  *           example: false
  */
 
+
+// ========================================
+// GET /api/especialidades
+// Administrador, médico y paciente
+// ========================================
+
 /**
  * @openapi
  * /api/especialidades:
  *   get:
  *     tags:
  *       - Especialidades
- *     summary: Obtener todas las especialidades
+ *
+ *     summary:
+ *       Obtener todas las especialidades
+ *
+ *     description:
+ *       Permite consultar las especialidades a usuarios autenticados
+ *       con rol administrador, médico o paciente.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     responses:
+ *
  *       200:
- *         description: Lista de especialidades
+ *         description:
+ *           Lista de especialidades
+ *
  *         content:
  *           application/json:
+ *
  *             schema:
  *               type: array
+ *
  *               items:
  *                 $ref: '#/components/schemas/Especialidad'
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           El usuario no tiene permisos para acceder
  */
 router.get(
   "/",
+
   autenticarJWT,
-  autorizarRoles("administrador", "medico", "paciente"),
-  especialidadesController.obtenerEspecialidades
+
+  autorizarRoles(
+    "administrador",
+    "medico",
+    "paciente"
+  ),
+
+  especialidadesController
+    .obtenerEspecialidades
 );
+
+
+// ========================================
+// GET /api/especialidades/:id
+// Administrador, médico y paciente
+// ========================================
 
 /**
  * @openapi
@@ -136,41 +198,80 @@ router.get(
  *   get:
  *     tags:
  *       - Especialidades
- *     summary: Obtener especialidad por ID
+ *
+ *     summary:
+ *       Obtener especialidad por ID
+ *
+ *     description:
+ *       Permite consultar una especialidad a usuarios autenticados
+ *       con rol administrador, médico o paciente.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     parameters:
+ *
  *       - in: path
  *         name: id
  *         required: true
+ *
  *         schema:
  *           type: integer
  *           minimum: 1
+ *
  *     responses:
+ *
  *       200:
- *         description: Especialidad encontrada
+ *         description:
+ *           Especialidad encontrada
+ *
  *         content:
  *           application/json:
+ *
  *             schema:
  *               $ref: '#/components/schemas/Especialidad'
+ *
  *       400:
- *         description: ID inválido
+ *         description:
+ *           ID inválido
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           El usuario no tiene permisos para acceder
+ *
  *       404:
- *         description: Especialidad no encontrada
+ *         description:
+ *           Especialidad no encontrada
  */
 router.get(
   "/:id",
+
   autenticarJWT,
-  autorizarRoles("administrador", "medico", "paciente"),
+
+  autorizarRoles(
+    "administrador",
+    "medico",
+    "paciente"
+  ),
+
   validarIdEspecialidad,
+
   validar,
-  especialidadesController.obtenerEspecialidadPorId
+
+  especialidadesController
+    .obtenerEspecialidadPorId
 );
+
+
+// ========================================
+// POST /api/especialidades
+// Solo administrador
+// ========================================
 
 /**
  * @openapi
@@ -178,36 +279,70 @@ router.get(
  *   post:
  *     tags:
  *       - Especialidades
- *     summary: Crear una especialidad
+ *
+ *     summary:
+ *       Crear una especialidad
+ *
+ *     description:
+ *       Solo un administrador puede crear especialidades.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     requestBody:
  *       required: true
+ *
  *       content:
  *         application/json:
+ *
  *           schema:
  *             $ref: '#/components/schemas/EspecialidadEntrada'
+ *
  *     responses:
+ *
  *       201:
- *         description: Especialidad creada correctamente
+ *         description:
+ *           Especialidad creada correctamente
+ *
  *       400:
- *         description: Datos inválidos
+ *         description:
+ *           Datos inválidos
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           Solo un administrador puede crear especialidades
+ *
  *       409:
- *         description: Ya existe una especialidad con ese nombre
+ *         description:
+ *           Ya existe una especialidad con ese nombre
  */
 router.post(
   "/",
+
   autenticarJWT,
-  autorizarRoles("administrador"),
+
+  autorizarRoles(
+    "administrador"
+  ),
+
   validarEspecialidad,
+
   validar,
-  especialidadesController.crearEspecialidad
+
+  especialidadesController
+    .crearEspecialidad
 );
+
+
+// ========================================
+// PUT /api/especialidades/:id
+// Solo administrador
+// ========================================
 
 /**
  * @openapi
@@ -215,46 +350,87 @@ router.post(
  *   put:
  *     tags:
  *       - Especialidades
- *     summary: Actualizar completamente una especialidad
+ *
+ *     summary:
+ *       Actualizar completamente una especialidad
+ *
+ *     description:
+ *       Solo un administrador puede actualizar completamente
+ *       una especialidad.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     parameters:
+ *
  *       - in: path
  *         name: id
  *         required: true
+ *
  *         schema:
  *           type: integer
  *           minimum: 1
+ *
  *     requestBody:
  *       required: true
+ *
  *       content:
  *         application/json:
+ *
  *           schema:
  *             $ref: '#/components/schemas/EspecialidadEntrada'
+ *
  *     responses:
+ *
  *       200:
- *         description: Especialidad actualizada
+ *         description:
+ *           Especialidad actualizada
+ *
  *       400:
- *         description: Datos inválidos
+ *         description:
+ *           Datos inválidos
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           Solo un administrador puede actualizar especialidades
+ *
  *       404:
- *         description: Especialidad no encontrada
+ *         description:
+ *           Especialidad no encontrada
+ *
  *       409:
- *         description: Nombre duplicado
+ *         description:
+ *           Nombre duplicado
  */
 router.put(
   "/:id",
+
   autenticarJWT,
-  autorizarRoles("administrador"),
+
+  autorizarRoles(
+    "administrador"
+  ),
+
   validarIdEspecialidad,
+
   validarEspecialidad,
+
   validar,
-  especialidadesController.actualizarEspecialidad
+
+  especialidadesController
+    .actualizarEspecialidad
 );
+
+
+// ========================================
+// PATCH /api/especialidades/:id
+// Solo administrador
+// ========================================
 
 /**
  * @openapi
@@ -262,47 +438,88 @@ router.put(
  *   patch:
  *     tags:
  *       - Especialidades
- *     summary: Actualizar parcialmente una especialidad
- *     description: Permite modificar uno o varios campos sin reemplazar el recurso completo.
+ *
+ *     summary:
+ *       Actualizar parcialmente una especialidad
+ *
+ *     description:
+ *       Permite modificar uno o varios campos sin reemplazar
+ *       el recurso completo.
+ *       Solo un administrador puede realizar esta operación.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     parameters:
+ *
  *       - in: path
  *         name: id
  *         required: true
+ *
  *         schema:
  *           type: integer
  *           minimum: 1
+ *
  *     requestBody:
  *       required: true
+ *
  *       content:
  *         application/json:
+ *
  *           schema:
  *             $ref: '#/components/schemas/EspecialidadParcial'
+ *
  *     responses:
+ *
  *       200:
- *         description: Especialidad actualizada parcialmente
+ *         description:
+ *           Especialidad actualizada parcialmente
+ *
  *       400:
- *         description: Datos inválidos o cuerpo vacío
+ *         description:
+ *           Datos inválidos o cuerpo vacío
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           Solo un administrador puede actualizar especialidades
+ *
  *       404:
- *         description: Especialidad no encontrada
+ *         description:
+ *           Especialidad no encontrada
+ *
  *       409:
- *         description: Nombre duplicado
+ *         description:
+ *           Nombre duplicado
  */
 router.patch(
   "/:id",
+
   autenticarJWT,
-  autorizarRoles("administrador"),
+
+  autorizarRoles(
+    "administrador"
+  ),
+
   validarIdEspecialidad,
+
   validarEspecialidadParcial,
+
   validar,
-  especialidadesController.actualizarEspecialidadParcial
+
+  especialidadesController
+    .actualizarEspecialidadParcial
 );
+
+
+// ========================================
+// DELETE /api/especialidades/:id
+// Solo administrador
+// ========================================
 
 /**
  * @openapi
@@ -310,36 +527,70 @@ router.patch(
  *   delete:
  *     tags:
  *       - Especialidades
- *     summary: Eliminar una especialidad
+ *
+ *     summary:
+ *       Eliminar una especialidad
+ *
+ *     description:
+ *       Solo un administrador puede eliminar especialidades.
+ *
  *     security:
  *       - ApiKeyAuth: []
  *         BearerAuth: []
+ *
  *     parameters:
+ *
  *       - in: path
  *         name: id
  *         required: true
+ *
  *         schema:
  *           type: integer
  *           minimum: 1
+ *
  *     responses:
+ *
  *       200:
- *         description: Especialidad eliminada
+ *         description:
+ *           Especialidad eliminada
+ *
  *       400:
- *         description: ID inválido
+ *         description:
+ *           ID inválido
+ *
  *       401:
- *         description: Credenciales de autenticación ausentes o inválidas
+ *         description:
+ *           Token ausente, inválido o expirado
+ *
  *       403:
- *         description: Usuario sin permisos para realizar la operación
+ *         description:
+ *           Solo un administrador puede eliminar especialidades
+ *
  *       404:
- *         description: Especialidad no encontrada
+ *         description:
+ *           Especialidad no encontrada
  */
 router.delete(
   "/:id",
+
   autenticarJWT,
-  autorizarRoles("administrador"),
+
+  autorizarRoles(
+    "administrador"
+  ),
+
   validarIdEspecialidad,
+
   validar,
-  especialidadesController.eliminarEspecialidad
+
+  especialidadesController
+    .eliminarEspecialidad
 );
 
-module.exports = router;
+
+// ========================================
+// Exportar router
+// ========================================
+
+module.exports =
+  router;

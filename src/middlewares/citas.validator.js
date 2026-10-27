@@ -1,263 +1,229 @@
-const {
-  body,
-  param
-} = require("express-validator");
 
+const { body, param } = require("express-validator");
 
 // ========================================
-// ID de cita
+// Utilidades
+// ========================================
+
+const MAX_BIGINT = 9223372036854775807n;
+
+const esIdValido = (valor) => {
+  if (
+    typeof valor !== "string" &&
+    typeof valor !== "number"
+  ) {
+    return false;
+  }
+
+  const texto = String(valor);
+
+  if (!/^[1-9][0-9]*$/.test(texto)) {
+    return false;
+  }
+
+  if (
+    typeof valor === "number" &&
+    !Number.isSafeInteger(valor)
+  ) {
+    return false;
+  }
+
+  try {
+    return BigInt(texto) <= MAX_BIGINT;
+  } catch {
+    return false;
+  }
+};
+
+// ========================================
+// Validar fecha YYYY-MM-DD
+// ========================================
+
+const esFechaValida = (valor) => {
+  if (typeof valor !== "string") {
+    return false;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+    return false;
+  }
+
+  const [anio, mes, dia] =
+    valor.split("-").map(Number);
+
+  if (
+    anio < 1 ||
+    mes < 1 ||
+    mes > 12 ||
+    dia < 1 ||
+    dia > 31
+  ) {
+    return false;
+  }
+
+  const diasMes = [
+    31,
+    (anio % 4 === 0 &&
+      (anio % 100 !== 0 || anio % 400 === 0))
+      ? 29
+      : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31
+  ];
+
+  return dia <= diasMes[mes - 1];
+};
+
+// ========================================
+// Validar hora HH:MM
+// ========================================
+
+const esHoraValida = (valor) =>
+  typeof valor === "string" &&
+  /^([01]\d|2[0-3]):([0-5]\d)$/.test(valor);
+
+// ========================================
+// IDs de rutas
 // ========================================
 
 const validarIdCita = [
   param("id")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El id debe ser un número entero positivo"
+      "El id debe ser un entero positivo válido"
     )
 ];
-
-
-// ========================================
-// ID de paciente
-// ========================================
 
 const validarIdPaciente = [
   param("pacienteId")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El id del paciente debe ser un número entero positivo"
+      "El pacienteId debe ser un entero positivo válido"
     )
 ];
-
-
-// ========================================
-// ID de médico
-// ========================================
 
 const validarIdMedico = [
   param("medicoId")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El id del médico debe ser un número entero positivo"
+      "El medicoId debe ser un entero positivo válido"
     )
 ];
 
+// ========================================
+// Campos obligatorios para POST y PUT
+// ========================================
+
+const camposCita = [
+  body("pacienteId")
+    .custom(esIdValido)
+    .withMessage(
+      "El pacienteId debe ser un entero positivo válido"
+    ),
+
+  body("medicoId")
+    .custom(esIdValido)
+    .withMessage(
+      "El medicoId debe ser un entero positivo válido"
+    ),
+
+  body("consultorioId")
+    .custom(esIdValido)
+    .withMessage(
+      "El consultorioId debe ser un entero positivo válido"
+    ),
+
+  body("fecha")
+    .custom(esFechaValida)
+    .withMessage(
+      "La fecha debe tener formato YYYY-MM-DD y existir en el calendario"
+    ),
+
+  body("hora")
+    .custom(esHoraValida)
+    .withMessage(
+      "La hora debe tener formato HH:MM"
+    ),
+
+  body("motivo")
+    .isString()
+    .withMessage(
+      "El motivo debe ser texto"
+    )
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage(
+      "El motivo es obligatorio"
+    )
+    .isLength({
+      min: 5,
+      max: 300
+    })
+    .withMessage(
+      "El motivo debe tener entre 5 y 300 caracteres"
+    )
+];
 
 // ========================================
 // POST
-// El cliente NO envía estado
 // ========================================
 
-const validarCreacionCita = [
-
-  body("pacienteId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El pacienteId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("medicoId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El medicoId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("consultorioId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El consultorioId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("fecha")
-    .isISO8601({
-      strict: true
-    })
-    .withMessage(
-      "La fecha debe tener formato YYYY-MM-DD"
-    ),
-
-
-  body("hora")
-    .matches(
-      /^([01]\d|2[0-3]):([0-5]\d)$/
-    )
-    .withMessage(
-      "La hora debe tener formato HH:MM"
-    ),
-
-
-  body("motivo")
-    .isString()
-    .withMessage(
-      "El motivo debe ser texto"
-    )
-    .trim()
-    .notEmpty()
-    .withMessage(
-      "El motivo es obligatorio"
-    )
-    .isLength({
-      min: 5,
-      max: 300
-    })
-    .withMessage(
-      "El motivo debe tener entre 5 y 300 caracteres"
-    )
-];
-
+const validarCreacionCita = [...camposCita];
 
 // ========================================
 // PUT
-// Tampoco permite modificar estado
 // ========================================
 
-const validarActualizacionCita = [
-
-  body("pacienteId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El pacienteId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("medicoId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El medicoId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("consultorioId")
-    .isInt({
-      min: 1
-    })
-    .withMessage(
-      "El consultorioId debe ser un número entero positivo"
-    )
-    .toInt(),
-
-
-  body("fecha")
-    .isISO8601({
-      strict: true
-    })
-    .withMessage(
-      "La fecha debe tener formato YYYY-MM-DD"
-    ),
-
-
-  body("hora")
-    .matches(
-      /^([01]\d|2[0-3]):([0-5]\d)$/
-    )
-    .withMessage(
-      "La hora debe tener formato HH:MM"
-    ),
-
-
-  body("motivo")
-    .isString()
-    .withMessage(
-      "El motivo debe ser texto"
-    )
-    .trim()
-    .notEmpty()
-    .withMessage(
-      "El motivo es obligatorio"
-    )
-    .isLength({
-      min: 5,
-      max: 300
-    })
-    .withMessage(
-      "El motivo debe tener entre 5 y 300 caracteres"
-    )
-];
-
+const validarActualizacionCita = [...camposCita];
 
 // ========================================
 // PATCH general
-// Estado NO permitido
 // ========================================
 
 const validarCitaParcial = [
-
   body("pacienteId")
     .optional()
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El pacienteId debe ser un número entero positivo"
-    )
-    .toInt(),
-
+      "El pacienteId debe ser un entero positivo válido"
+    ),
 
   body("medicoId")
     .optional()
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El medicoId debe ser un número entero positivo"
-    )
-    .toInt(),
-
+      "El medicoId debe ser un entero positivo válido"
+    ),
 
   body("consultorioId")
     .optional()
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El consultorioId debe ser un número entero positivo"
-    )
-    .toInt(),
-
+      "El consultorioId debe ser un entero positivo válido"
+    ),
 
   body("fecha")
     .optional()
-    .isISO8601({
-      strict: true
-    })
+    .custom(esFechaValida)
     .withMessage(
-      "La fecha debe tener formato YYYY-MM-DD"
+      "La fecha debe tener formato YYYY-MM-DD y existir en el calendario"
     ),
-
 
   body("hora")
     .optional()
-    .matches(
-      /^([01]\d|2[0-3]):([0-5]\d)$/
-    )
+    .custom(esHoraValida)
     .withMessage(
       "La hora debe tener formato HH:MM"
     ),
-
 
   body("motivo")
     .optional()
@@ -265,6 +231,7 @@ const validarCitaParcial = [
     .withMessage(
       "El motivo debe ser texto"
     )
+    .bail()
     .trim()
     .notEmpty()
     .withMessage(
@@ -279,13 +246,11 @@ const validarCitaParcial = [
     )
 ];
 
-
 // ========================================
 // PATCH especializado de estado
 // ========================================
 
 const validarEstadoCita = [
-
   body("estado")
     .isIn([
       "programada",
@@ -298,6 +263,9 @@ const validarEstadoCita = [
     )
 ];
 
+// ========================================
+// Exportaciones
+// ========================================
 
 module.exports = {
   validarIdCita,

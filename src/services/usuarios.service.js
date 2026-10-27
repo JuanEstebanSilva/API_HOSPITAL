@@ -1,130 +1,159 @@
-const { consultar } = require("../config/database");
+const { consultar, pool } = require("../config/database");
+
 const {
   generarPasswordHash,
-  verificarPassword
+  verificarPassword,
 } = require("../utils/password.util");
+
+// ========================================
+// Columnas compatibles con la API
+// ========================================
+
+const columnasUsuario = `
+  u.id,
+  u.nombre,
+  u.email,
+  u.password_hash AS "passwordHash",
+  r.nombre AS rol,
+  u.activo
+`;
 
 // ========================================
 // Obtener usuario por email
 // ========================================
+
 const obtenerUsuarioPorEmail = async (email) => {
   const resultado = await consultar(
-    `
-    SELECT u.id, u.auth_user_id AS "authUserId", u.rol_id AS "rolId",
-           u.nombre, u.email, u.password_hash AS "passwordHash",
-           u.activo, u.fecha_registro AS "fechaRegistro",
-           r.nombre AS rol
-    FROM public.usuarios u
-    JOIN public.roles r ON u.rol_id = r.id
-    WHERE LOWER(u.email) = LOWER($1)
-    `,
-    [email]
+    `SELECT ${columnasUsuario}
+     FROM public.usuarios u
+     INNER JOIN public.roles r
+       ON r.id = u.rol_id
+     WHERE LOWER(u.email) = LOWER($1)
+     LIMIT 1`,
+    [email],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
 // Obtener usuario por ID
 // ========================================
+
 const obtenerUsuarioPorId = async (id) => {
   const resultado = await consultar(
-    `
-    SELECT u.id, u.auth_user_id AS "authUserId", u.rol_id AS "rolId",
-           u.nombre, u.email, u.password_hash AS "passwordHash",
-           u.activo, u.fecha_registro AS "fechaRegistro",
-           r.nombre AS rol
-    FROM public.usuarios u
-    JOIN public.roles r ON u.rol_id = r.id
-    WHERE u.id = $1
-    `,
-    [id]
+    `SELECT ${columnasUsuario}
+     FROM public.usuarios u
+     INNER JOIN public.roles r
+       ON r.id = u.rol_id
+     WHERE u.id = $1`,
+    [id],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Crear usuario (Registro público - rol 'paciente')
+// Inserción controlada de usuario
 // ========================================
-const crearUsuario = async (datos) => {
-  const passwordHash = await generarPasswordHash(datos.password);
 
-  const rolRes = await consultar(
-    `SELECT id FROM public.roles WHERE LOWER(nombre) = 'paciente'`
-  );
-  const rolId = rolRes.rows[0]?.id || 3;
+const insertarUsuario = async ({ nombre, email, password, rol }) => {
+  const passwordHash = await generarPasswordHash(password);
 
   const resultado = await consultar(
-    `
-    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
-    VALUES ($1, $2, $3, $4, TRUE)
-    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
-              nombre, email, password_hash AS "passwordHash",
-              activo, fecha_registro AS "fechaRegistro"
-    `,
-    [rolId, datos.nombre, datos.email.toLowerCase(), passwordHash]
+    `WITH insertado AS (
+       INSERT INTO public.usuarios (
+         nombre,
+         email,
+         password_hash,
+         rol_id,
+         activo
+       )
+       SELECT
+         $1,
+         LOWER($2),
+         $3,
+         r.id,
+         TRUE
+       FROM public.roles r
+       WHERE r.nombre = $4
+         AND r.activo = TRUE
+       RETURNING *
+     )
+     SELECT
+       i.id,
+       i.nombre,
+       i.email,
+       i.password_hash AS "passwordHash",
+       r.nombre AS rol,
+       i.activo
+     FROM insertado i
+     INNER JOIN public.roles r
+       ON r.id = i.rol_id`,
+    [nombre, email, passwordHash, rol],
   );
 
-  const usuario = resultado.rows[0];
-  usuario.rol = "paciente";
-  return usuario;
-};
+  if (resultado.rows.length === 0) {
+    const error = new Error("El rol solicitado no existe o está inactivo");
 
-// ========================================
-// Crear usuario desde administración
-// ========================================
-const crearUsuarioAdministrativo = async (datos) => {
-  const passwordHash = await generarPasswordHash(datos.password);
-
-  const rolRes = await consultar(
-    `SELECT id, nombre FROM public.roles WHERE LOWER(nombre) = LOWER($1)`,
-    [datos.rol]
-  );
-
-  if (rolRes.rows.length === 0) {
-    const error = new Error(`El rol especificado '${datos.rol}' no existe`);
-    error.status = 400;
+    error.codigoAplicacion = "ROL_INVALIDO";
     throw error;
   }
 
-  const rolId = rolRes.rows[0].id;
-  const rolNombre = rolRes.rows[0].nombre;
+  return resultado.rows[0];
+};
 
-  const resultado = await consultar(
-    `
-    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
-    VALUES ($1, $2, $3, $4, TRUE)
-    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
-              nombre, email, password_hash AS "passwordHash",
-              activo, fecha_registro AS "fechaRegistro"
-    `,
-    [rolId, datos.nombre, datos.email.toLowerCase(), passwordHash]
-  );
+// ========================================
+// Registro público
+// El cliente NO decide el rol
+// ========================================
 
-  const usuario = resultado.rows[0];
-  usuario.rol = rolNombre;
-  return usuario;
+const crearUsuario = async (datos) => {
+  return insertarUsuario({
+    nombre: datos.nombre,
+    email: datos.email,
+    password: datos.password,
+    rol: "paciente",
+  });
+};
+
+// ========================================
+// Creación administrativa
+// ========================================
+
+const crearUsuarioAdministrativo = async (datos) => {
+  const rolesPermitidos = ["medico", "administrador"];
+
+  if (!rolesPermitidos.includes(datos.rol)) {
+    const error = new Error("Rol no permitido para esta operación");
+
+    error.codigoAplicacion = "ROL_INVALIDO";
+    throw error;
+  }
+
+  return insertarUsuario({
+    nombre: datos.nombre,
+    email: datos.email,
+    password: datos.password,
+    rol: datos.rol,
+  });
 };
 
 // ========================================
 // Verificar credenciales
 // ========================================
+
 const verificarCredenciales = async (email, password) => {
   const usuario = await obtenerUsuarioPorEmail(email);
-  if (!usuario) {
+
+  if (!usuario || !usuario.passwordHash) {
     return null;
   }
 
-  let passwordValida = await verificarPassword(
+  const passwordValida = await verificarPassword(
     password,
-    usuario.passwordHash
+    usuario.passwordHash,
   );
-
-  if (!passwordValida && (password.includes("-") || password.includes("—"))) {
-    const altPassword = password.includes("-")
-      ? password.replace("-", "—")
-      : password.replace("—", "-");
-    passwordValida = await verificarPassword(altPassword, usuario.passwordHash);
-  }
 
   if (!passwordValida) {
     return null;
@@ -134,46 +163,156 @@ const verificarCredenciales = async (email, password) => {
 };
 
 // ========================================
-// Crear administrador inicial (Bootstrap)
+// Bootstrap administrativo
+//
+// Solo se ejecuta mediante el script.
+//
+// Reglas:
+// 1. No modificar administradores existentes.
+// 2. No convertir pacientes o médicos en admin.
+// 3. No crear un segundo administrador inicial.
+// 4. Usar transacción y bloqueo.
+// 5. No devolver contraseñas ni hashes.
 // ========================================
+
 const crearAdministradorInicial = async () => {
-  const nombre = process.env.ADMIN_NOMBRE;
-  const email = process.env.ADMIN_EMAIL;
+  const nombre = process.env.ADMIN_NOMBRE?.trim();
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
   if (!nombre || !email || !password) {
-    console.warn("Administrador inicial no configurado");
-    return null;
+    throw new Error(
+      "Faltan las variables ADMIN_NOMBRE, " + "ADMIN_EMAIL o ADMIN_PASSWORD",
+    );
   }
 
-  const existente = await obtenerUsuarioPorEmail(email);
-  if (existente) {
-    return existente;
+  if (password.length < 12) {
+    throw new Error(
+      "La contraseña inicial debe tener " + "al menos 12 caracteres",
+    );
   }
 
-  const rolRes = await consultar(
-    `SELECT id FROM public.roles WHERE LOWER(nombre) = 'administrador'`
-  );
-  const rolId = rolRes.rows[0]?.id || 1;
+  // El hash se calcula antes de abrir
+  // la transacción para reducir el tiempo
+  // que mantenemos bloqueos en PostgreSQL.
 
   const passwordHash = await generarPasswordHash(password);
 
-  const resultado = await consultar(
-    `
-    INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo)
-    VALUES ($1, $2, $3, $4, TRUE)
-    RETURNING id, auth_user_id AS "authUserId", rol_id AS "rolId",
-              nombre, email, password_hash AS "passwordHash",
-              activo, fecha_registro AS "fechaRegistro"
-    `,
-    [rolId, nombre, email.toLowerCase(), passwordHash]
-  );
+  const cliente = await pool.connect();
 
-  console.log("Administrador inicial creado en PostgreSQL");
-  const administrador = resultado.rows[0];
-  administrador.rol = "administrador";
-  return administrador;
+  let transaccionIniciada = false;
+
+  try {
+    await cliente.query("BEGIN");
+    transaccionIniciada = true;
+
+    // Bloqueo exclusivo para ejecuciones
+    // simultáneas de este mismo bootstrap.
+
+    await cliente.query("SELECT pg_advisory_xact_lock($1, $2)", [7505, 1]);
+
+    // Comprobar si existe cualquier cuenta
+    // con rol administrador, incluso inactiva.
+
+    const administradores = await cliente.query(
+      `SELECT
+         u.id,
+         u.nombre,
+         u.email,
+         u.activo
+       FROM public.usuarios u
+       INNER JOIN public.roles r
+         ON r.id = u.rol_id
+       WHERE r.nombre = 'administrador'
+       ORDER BY u.id
+       LIMIT 1`,
+    );
+
+    if (administradores.rows.length > 0) {
+      await cliente.query("COMMIT");
+      transaccionIniciada = false;
+
+      return {
+        creado: false,
+        motivo: "ADMINISTRADOR_EXISTENTE",
+      };
+    }
+
+    // Evitar que una cuenta de otro rol
+    // sea convertida en administrador.
+
+    const correoExistente = await cliente.query(
+      `SELECT id
+       FROM public.usuarios
+       WHERE LOWER(email) = LOWER($1)
+       LIMIT 1`,
+      [email],
+    );
+
+    if (correoExistente.rows.length > 0) {
+      throw new Error(
+        "El correo de bootstrap ya pertenece " +
+          "a otro usuario. No se elevarán privilegios.",
+      );
+    }
+
+    // Verificar rol administrativo activo.
+
+    const rolResultado = await cliente.query(
+      `SELECT id
+       FROM public.roles
+       WHERE nombre = 'administrador'
+         AND activo = TRUE
+       LIMIT 1`,
+    );
+
+    if (rolResultado.rows.length === 0) {
+      throw new Error("No existe un rol administrador activo");
+    }
+
+    const rolId = rolResultado.rows[0].id;
+
+    // Crear exclusivamente el primer admin.
+
+    const resultado = await cliente.query(
+      `INSERT INTO public.usuarios (
+         nombre,
+         email,
+         password_hash,
+         rol_id,
+         activo
+       )
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING id, nombre, email, activo`,
+      [nombre, email, passwordHash, rolId],
+    );
+
+    await cliente.query("COMMIT");
+    transaccionIniciada = false;
+
+    return {
+      creado: true,
+      motivo: "ADMINISTRADOR_CREADO",
+      usuario: resultado.rows[0],
+    };
+  } catch (error) {
+    if (transaccionIniciada) {
+      try {
+        await cliente.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("Error al revertir bootstrap:", rollbackError.message);
+      }
+    }
+
+    throw error;
+  } finally {
+    cliente.release();
+  }
 };
+
+// ========================================
+// Exportaciones
+// ========================================
 
 module.exports = {
   obtenerUsuarioPorEmail,
@@ -181,5 +320,5 @@ module.exports = {
   crearUsuario,
   crearUsuarioAdministrativo,
   verificarCredenciales,
-  crearAdministradorInicial
+  crearAdministradorInicial,
 };

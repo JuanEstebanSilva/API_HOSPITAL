@@ -1,121 +1,104 @@
-require(
-  "dotenv"
-).config();
 
-const express =
-  require(
-    "express"
-  );
+// ========================================
+// Variables de entorno
+// ========================================
 
-const helmet =
-  require(
-    "helmet"
-  );
+require("dotenv").config();
 
-const cors =
-  require(
-    "cors"
-  );
+// ========================================
+// Importaciones
+// ========================================
 
-const {
-  rateLimit
-} = require(
+const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+
+const { rateLimit } = require(
   "express-rate-limit"
 );
 
-const swaggerUi =
-  require(
-    "swagger-ui-express"
-  );
+const swaggerUi = require(
+  "swagger-ui-express"
+);
 
-const swaggerSpec =
-  require(
-    "./docs/swagger"
-  );
+const swaggerSpec = require("./docs/swagger");
+
+// ========================================
+// Middleware API Key
+// ========================================
+
+const validarApiKey = require(
+  "./middlewares/apiKey.middleware"
+);
 
 // ========================================
 // Rutas
 // ========================================
 
-const seguridadRoutes =
-  require("./routes/seguridad.routes");
+const pacientesRoutes = require(
+  "./routes/pacientes.routes"
+);
 
-const authRoutes =
- require("./routes/auth.routes");
+const especialidadesRoutes = require(
+  "./routes/especialidades.routes"
+);
 
-const pacientesRoutes =
-  require(
-    "./routes/pacientes.routes"
-  );
+const medicosRoutes = require(
+  "./routes/medicos.routes"
+);
 
-const especialidadesRoutes =
-  require(
-    "./routes/especialidades.routes"
-  );
+const consultoriosRoutes = require(
+  "./routes/consultorios.routes"
+);
 
-const medicosRoutes =
-  require(
-    "./routes/medicos.routes"
-  );
+const citasRoutes = require(
+  "./routes/citas.routes"
+);
 
-const consultoriosRoutes =
-  require(
-    "./routes/consultorios.routes"
-  );
-
-const citasRoutes =
-  require(
-    "./routes/citas.routes"
-  );
-
-const usuariosRoutes =
-  require(
-    "./routes/usuarios.routes"
-  );
-
-const usuariosService =
-  require(
-    "./services/usuarios.service"
-  );
-
-// ========================================
-// Middlewares propios
-// ========================================
-
-const validarApiKey =
-  require("./middlewares/apiKey.middleware");
-
-const {
-  rutaNoEncontrada,
-  manejarError
-} = require(
-  "./middlewares/errores.middleware"
+const usuariosRoutes = require(
+  "./routes/usuarios.routes"
 );
 
 // ========================================
-// Aplicación (¡DEBE IR ANTES DE USAR "app")
+// Rutas de seguridad
 // ========================================
 
-const app =
-  express();
+const seguridadRoutes = require(
+  "./routes/seguridad.routes"
+);
 
-const PORT =
-  process.env.PORT ||
-  3000;
+// ========================================
+// Rutas de autenticación
+// ========================================
 
+const authRoutes = require(
+  "./routes/auth.routes"
+);
+
+// ========================================
+// Middleware de errores
+// ========================================
+
+const {
+  rutaNoEncontrada,
+  manejarError,
+} = require("./middlewares/errores.middleware");
+
+// ========================================
+// Aplicación
+// ========================================
+
+const app = express();
+
+const PORT = process.env.PORT || 3000;
 
 // ========================================
 // Seguridad
 // ========================================
 
-app.disable(
-  "x-powered-by"
-);
+app.disable("x-powered-by");
 
-app.use(
-  helmet()
-);
-
+app.use(helmet());
 
 // ========================================
 // CORS
@@ -123,21 +106,16 @@ app.use(
 
 app.use(
   cors({
-
-    origin:
-      process.env
-        .ALLOWED_ORIGIN,
-
+    origin: process.env.ALLOWED_ORIGIN,
     methods: [
       "GET",
       "POST",
       "PUT",
       "PATCH",
-      "DELETE"
-    ]
-  })
+      "DELETE",
+    ],
+  }),
 );
-
 
 // ========================================
 // Limitar tamaño JSON
@@ -145,90 +123,95 @@ app.use(
 
 app.use(
   express.json({
-
-    limit:
-      "10kb"
-  })
+    limit: "10kb",
+  }),
 );
-
 
 // ========================================
 // Rate Limiting
 // ========================================
 
-const limiter =
-  rateLimit({
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
 
-    windowMs:
-      15 *
-      60 *
-      1000,
+  message: {
+    mensaje:
+      "Demasiadas solicitudes. " +
+      "Intente nuevamente más tarde.",
+  },
+});
 
-    limit:
-      100,
+app.use("/api", limiter);
 
-    standardHeaders:
-      "draft-8",
+// ========================================
+// API Key global
+// ========================================
 
-    legacyHeaders:
-      false,
-
-    message: {
-
-      mensaje:
-        "Demasiadas solicitudes. Intente nuevamente más tarde."
-    }
-  });
-
-
-app.use(
-  "/api",
-  limiter
-);
-
+app.use("/api", validarApiKey);
 
 // ========================================
 // Ruta principal
 // ========================================
 
-app.get(
-  "/",
-
-  (
-    req,
-    res
-  ) => {
-
-    res
-      .status(200)
-      .json({
-
-        mensaje:
-          "API Hospital funcionando"
-      });
-  }
-);
-
+app.get("/", (req, res) => {
+  res.status(200).json({
+    mensaje: "API Hospital funcionando",
+  });
+});
 
 // ========================================
-// Autenticación (Ruta pública - ANTES de la API Key)
+// Autenticación
+// Registro y login requieren API Key
+// ========================================
+
+app.use("/api/auth", authRoutes);
+
+// ========================================
+// Recursos
 // ========================================
 
 app.use(
- "/api/auth",
- authRoutes
+  "/api/pacientes",
+  pacientesRoutes
 );
 
+app.use(
+  "/api/especialidades",
+  especialidadesRoutes
+);
+
+app.use(
+  "/api/medicos",
+  medicosRoutes
+);
+
+app.use(
+  "/api/consultorios",
+  consultoriosRoutes
+);
+
+app.use(
+  "/api/citas",
+  citasRoutes
+);
 
 // ========================================
-// Autenticación mediante API Key
+// Gestión administrativa de usuarios
 // ========================================
 
-app.use("/api", validarApiKey);
+// API Key global.
+// JWT y RBAC en usuarios.routes.js.
 
+app.use(
+  "/api/usuarios",
+  usuariosRoutes
+);
 
 // ========================================
-// Recursos y Rutas
+// Seguridad
 // ========================================
 
 app.use(
@@ -236,134 +219,79 @@ app.use(
   seguridadRoutes
 );
 
-
-app.use(
-  "/api/pacientes",
-  pacientesRoutes
-);
-
-
-app.use(
-  "/api/especialidades",
-  especialidadesRoutes
-);
-
-
-app.use(
-  "/api/medicos",
-  medicosRoutes
-);
-
-
-app.use(
-  "/api/consultorios",
-  consultoriosRoutes
-);
-
-
-app.use(
-  "/api/citas",
-  citasRoutes
-);
-
-
-app.use(
-  "/api/usuarios",
-  usuariosRoutes
-);
-
-
 // ========================================
 // Swagger
 // ========================================
 
 app.use(
   "/api-docs",
-
   swaggerUi.serve,
-
-  swaggerUi.setup(
-    swaggerSpec
-  )
+  swaggerUi.setup(swaggerSpec)
 );
-
 
 // ========================================
 // OpenAPI JSON
 // ========================================
 
-app.get(
-  "/openapi.json",
-
-  (
-    req,
-    res
-  ) => {
-
-    res.json(
-      swaggerSpec
-    );
-  }
-);
-
+app.get("/openapi.json", (req, res) => {
+  res.json(swaggerSpec);
+});
 
 // ========================================
 // Ruta no encontrada
 // ========================================
 
-app.use(
-  rutaNoEncontrada
-);
-
+app.use(rutaNoEncontrada);
 
 // ========================================
 // Manejo global de errores
 // ========================================
 
-app.use(
-  manejarError
-);
-
+app.use(manejarError);
 
 // ========================================
-// Servidor
+// Inicio normal de la API
 // ========================================
+
+// No se crean usuarios ni administradores
+// durante el arranque del servidor.
 
 const iniciarServidor = () => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      await usuariosService.crearAdministradorInicial();
+  return new Promise((resolve, reject) => {
+    const servidor = app.listen(PORT, () => {
+      console.log(
+        `Servidor ejecutándose en http://localhost:${PORT}`
+      );
 
-      const server = app.listen(PORT, "0.0.0.0", () => {
-        console.log(
-          `Servidor ejecutándose en http://localhost:${PORT}`
-        );
-        console.log(
-          `Swagger UI: http://localhost:${PORT}/api-docs`
-        );
-        console.log(
-          `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
-        );
-        resolve(server);
-      });
+      console.log(
+        `Swagger UI: http://localhost:${PORT}/api-docs`
+      );
 
-      server.on("error", (err) => {
-        console.error("Error en el servidor HTTP:", err.message);
-        reject(err);
-      });
-    } catch (error) {
+      console.log(
+        `OpenAPI JSON: http://localhost:${PORT}/openapi.json`
+      );
+      resolve(servidor);
+    });
+
+    servidor.on("error", (error) => {
       console.error(
-        "Error al iniciar el servidor:",
+        "Error al iniciar servidor:",
         error.message
       );
-      process.exit(1);
-    }
+
+      process.exitCode = 1;
+      reject(error);
+    });
   });
 };
+
+// ========================================
+// Ejecutar
+// ========================================
 
 if (require.main === module) {
   iniciarServidor();
 }
 
 module.exports = { app, iniciarServidor };
-
+

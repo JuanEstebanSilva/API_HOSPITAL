@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "node --watch src/app.js",
     "start": "node src/app.js",
+    "seed:admin": "node src/scripts/crearAdmin.js",
+    "rls": "node src/scripts/diagnosticoRLS.js",
     "test": "node scripts/validar-bloques-7.js",
+    "test:bootstrap": "node scripts/validar-bloque-7-5-1.js",
+    "test:seguridad": "node scripts/validar-bloque-8-seguridad.js",
     "test:db": "node scripts/probar-conexion.js"
   },
   "keywords": [

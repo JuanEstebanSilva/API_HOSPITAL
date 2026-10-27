@@ -1,5 +1,7 @@
 const express = require("express");
+
 const router = express.Router();
+
 /**
  * @swagger
  * /api/seguridad/cliente:
@@ -17,9 +19,10 @@ const router = express.Router();
  *         description: API Key deshabilitada
  */
 router.get("/cliente", (req, res) => {
- return res.status(200).json({
- mensaje: "Cliente autenticado",
- cliente: req.clienteApi
- });
+  return res.status(200).json({
+    mensaje: "Cliente autenticado",
+    cliente: req.clienteApi
+  });
 });
+
 module.exports = router;

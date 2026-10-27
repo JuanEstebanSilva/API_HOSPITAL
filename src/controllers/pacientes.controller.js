@@ -1,17 +1,54 @@
+
 const { matchedData } = require("express-validator");
-const pacientesService = require("../services/pacientes.service");
-const usuariosService = require("../services/usuarios.service");
-const citasService = require("../services/citas.service");
+
+const pacientesService =
+  require("../services/pacientes.service");
+
+const citasService =
+  require("../services/citas.service");
+
+const usuariosService =
+  require("../services/usuarios.service");
+
+const mismoId = (a, b) =>
+  a != null && b != null && String(a) === String(b);
+
+const manejarError = (error, res, next) => {
+  if (error.code === "23505") {
+    return res.status(409).json({
+      mensaje:
+        "El documento, correo o usuario ya está asociado"
+    });
+  }
+
+  if (error.code === "23503") {
+    return res.status(409).json({
+      mensaje:
+        "La operación incumple una relación de la base de datos"
+    });
+  }
+
+  if (["23502", "23514", "22P02"].includes(error.code)) {
+    return res.status(400).json({
+      mensaje: "Datos del paciente inválidos"
+    });
+  }
+
+  return next(error);
+};
 
 // ========================================
-// Validar reglas de asociación usuario <-> paciente
+// Validar usuario asociado
 // ========================================
-const validarUsuarioPaciente = async (usuarioId, pacienteIdExcluir = null) => {
-  if (!usuarioId) {
+
+const validarUsuarioPaciente = async (usuarioId) => {
+  if (usuarioId == null) {
     return { valido: true };
   }
 
-  const usuario = await usuariosService.obtenerUsuarioPorId(usuarioId);
+  const usuario =
+    await usuariosService.obtenerUsuarioPorId(usuarioId);
+
   if (!usuario) {
     return {
       valido: false,
@@ -24,16 +61,17 @@ const validarUsuarioPaciente = async (usuarioId, pacienteIdExcluir = null) => {
     return {
       valido: false,
       status: 409,
-      mensaje: "El usuario asociado no tiene rol paciente"
+      mensaje:
+        "El usuario asociado no tiene rol paciente"
     };
   }
 
-  const pacienteAsociado = await pacientesService.obtenerPacientePorUsuarioId(usuarioId);
-  if (pacienteAsociado && (!pacienteIdExcluir || String(pacienteAsociado.id) !== String(pacienteIdExcluir))) {
+  if (!usuario.activo) {
     return {
       valido: false,
       status: 409,
-      mensaje: "El usuario ya está asociado a un paciente"
+      mensaje:
+        "El usuario asociado está inactivo"
     };
   }
 
@@ -41,24 +79,75 @@ const validarUsuarioPaciente = async (usuarioId, pacienteIdExcluir = null) => {
 };
 
 // ========================================
-// GET todos
+// Validar duplicados
 // ========================================
+
+const validarDuplicados = async (
+  datos,
+  idExcluir = null
+) => {
+  if (datos.usuarioId != null) {
+    const asociado =
+      await pacientesService.obtenerPacientePorUsuarioId(
+        datos.usuarioId
+      );
+
+    if (
+      asociado &&
+      (idExcluir == null ||
+       !mismoId(asociado.id, idExcluir))
+    ) {
+      return {
+        status: 409,
+        mensaje:
+          "El usuario ya está asociado a otro paciente"
+      };
+    }
+  }
+
+  if (datos.documento !== undefined) {
+    const existente =
+      await pacientesService.buscarPacientePorDocumento(
+        datos.documento
+      );
+
+    if (
+      existente &&
+      (idExcluir == null ||
+       !mismoId(existente.id, idExcluir))
+    ) {
+      return {
+        status: 409,
+        mensaje:
+          "El documento pertenece a otro paciente"
+      };
+    }
+  }
+
+  return null;
+};
+
+// GET todos
 const obtenerPacientes = async (req, res, next) => {
   try {
-    const pacientes = await pacientesService.obtenerPacientes();
-    res.status(200).json(pacientes);
+    const pacientes =
+      await pacientesService.obtenerPacientes();
+
+    return res.status(200).json(pacientes);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
-// ========================================
 // GET por ID
-// ========================================
-const obtenerPacientePorId = async (req, res, next) => {
+const obtenerPacientePorId = async (
+  req, res, next
+) => {
   try {
-    const { id } = req.params;
-    const paciente = await pacientesService.obtenerPacientePorId(id);
+    const paciente =
+      await pacientesService.obtenerPacientePorId(
+        req.params.id
+      );
 
     if (!paciente) {
       return res.status(404).json({
@@ -66,225 +155,179 @@ const obtenerPacientePorId = async (req, res, next) => {
       });
     }
 
-    res.status(200).json(paciente);
+    return res.status(200).json(paciente);
   } catch (error) {
-    next(error);
+    return manejarError(error, res, next);
   }
 };
 
-// ========================================
-// POST - Crear paciente
-// ========================================
+// POST
 const crearPaciente = async (req, res, next) => {
   try {
-    const datosPermitidos = matchedData(req, {
+    const datos = matchedData(req, {
       locations: ["body"]
     });
 
-    const validacionUsuario = await validarUsuarioPaciente(datosPermitidos.usuarioId);
-    if (!validacionUsuario.valido) {
-      return res.status(validacionUsuario.status).json({
-        mensaje: validacionUsuario.mensaje
+    const validacion =
+      await validarUsuarioPaciente(datos.usuarioId);
+
+    if (!validacion.valido) {
+      return res.status(validacion.status).json({
+        mensaje: validacion.mensaje
       });
     }
 
-    const existente = await pacientesService.buscarPacientePorDocumento(
-      datosPermitidos.documento
-    );
+    const duplicado =
+      await validarDuplicados(datos);
 
-    if (existente) {
-      return res.status(409).json({
-        mensaje: "Ya existe un paciente con ese documento"
+    if (duplicado) {
+      return res.status(duplicado.status).json({
+        mensaje: duplicado.mensaje
       });
     }
 
-    if (datosPermitidos.email) {
-      const emailExistente = await pacientesService.buscarPacientePorEmail(
-        datosPermitidos.email
-      );
-      if (emailExistente) {
-        return res.status(409).json({
-          mensaje: "Ya existe un paciente con ese correo electrónico"
-        });
-      }
-    }
+    const paciente =
+      await pacientesService.crearPaciente(datos);
 
-    const pacienteCreado = await pacientesService.crearPaciente(datosPermitidos);
-
-    res.status(201).json({
+    return res.status(201).json({
       mensaje: "Paciente creado correctamente",
-      paciente: pacienteCreado
+      paciente
     });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({
-        mensaje: "Ya existe un paciente con ese documento o correo electrónico"
-      });
-    }
-    if (error.code === "23503") {
-      return res.status(400).json({
-        mensaje: "Clave foránea inválida (el usuario indicado no existe)"
-      });
-    }
-    next(error);
+    return manejarError(error, res, next);
   }
 };
 
-// ========================================
-// PUT - Actualización completa
-// ========================================
-const actualizarPaciente = async (req, res, next) => {
+// PUT
+const actualizarPaciente = async (
+  req, res, next
+) => {
   try {
     const { id } = req.params;
-    const datosPermitidos = matchedData(req, {
+    const datos = matchedData(req, {
       locations: ["body"]
     });
 
-    const validacionUsuario = await validarUsuarioPaciente(datosPermitidos.usuarioId, id);
-    if (!validacionUsuario.valido) {
-      return res.status(validacionUsuario.status).json({
-        mensaje: validacionUsuario.mensaje
-      });
-    }
+    const actual =
+      await pacientesService.obtenerPacientePorId(id);
 
-    const pacienteActual = await pacientesService.obtenerPacientePorId(id);
-    if (!pacienteActual) {
+    if (!actual) {
       return res.status(404).json({
         mensaje: "Paciente no encontrado"
       });
     }
 
-    const existente = await pacientesService.buscarPacientePorDocumento(
-      datosPermitidos.documento
-    );
+    const validacion =
+      await validarUsuarioPaciente(datos.usuarioId);
 
-    if (existente && String(existente.id) !== String(id)) {
-      return res.status(409).json({
-        mensaje: "El documento pertenece a otro paciente"
+    if (!validacion.valido) {
+      return res.status(validacion.status).json({
+        mensaje: validacion.mensaje
       });
     }
 
-    if (datosPermitidos.email) {
-      const emailExistente = await pacientesService.buscarPacientePorEmail(
-        datosPermitidos.email
-      );
-      if (emailExistente && String(emailExistente.id) !== String(id)) {
-        return res.status(409).json({
-          mensaje: "El correo electrónico pertenece a otro paciente"
-        });
-      }
+    const duplicado =
+      await validarDuplicados(datos, id);
+
+    if (duplicado) {
+      return res.status(duplicado.status).json({
+        mensaje: duplicado.mensaje
+      });
     }
 
-    const pacienteActualizado = await pacientesService.actualizarPaciente(
-      id,
-      datosPermitidos
-    );
+    const paciente =
+      await pacientesService.actualizarPaciente(
+        id, datos
+      );
 
-    res.status(200).json({
+    if (!paciente) {
+      return res.status(404).json({
+        mensaje: "Paciente no encontrado"
+      });
+    }
+
+    return res.status(200).json({
       mensaje: "Paciente actualizado correctamente",
-      paciente: pacienteActualizado
+      paciente
     });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({
-        mensaje: "Ya existe un paciente con ese documento o correo electrónico"
-      });
-    }
-    if (error.code === "23503") {
-      return res.status(400).json({
-        mensaje: "Clave foránea inválida (el usuario indicado no existe)"
-      });
-    }
-    next(error);
+    return manejarError(error, res, next);
   }
 };
 
-// ========================================
-// PATCH - Actualización parcial
-// ========================================
-const actualizarPacienteParcial = async (req, res, next) => {
+// PATCH
+const actualizarPacienteParcial = async (
+  req, res, next
+) => {
   try {
     const { id } = req.params;
-    const datosPermitidos = matchedData(req, {
+    const datos = matchedData(req, {
       locations: ["body"]
     });
 
-    if (Object.keys(datosPermitidos).length === 0) {
+    if (Object.keys(datos).length === 0) {
       return res.status(400).json({
-        mensaje: "Debe enviar al menos un campo para actualizar"
+        mensaje:
+          "Debe enviar al menos un campo para actualizar"
       });
     }
 
-    if (datosPermitidos.usuarioId !== undefined) {
-      const validacionUsuario = await validarUsuarioPaciente(datosPermitidos.usuarioId, id);
-      if (!validacionUsuario.valido) {
-        return res.status(validacionUsuario.status).json({
-          mensaje: validacionUsuario.mensaje
-        });
-      }
-    }
+    const actual =
+      await pacientesService.obtenerPacientePorId(id);
 
-    const pacienteActual = await pacientesService.obtenerPacientePorId(id);
-    if (!pacienteActual) {
+    if (!actual) {
       return res.status(404).json({
         mensaje: "Paciente no encontrado"
       });
     }
 
-    if (datosPermitidos.documento) {
-      const existente = await pacientesService.buscarPacientePorDocumento(
-        datosPermitidos.documento
-      );
+    if (Object.hasOwn(datos, "usuarioId")) {
+      const validacion =
+        await validarUsuarioPaciente(datos.usuarioId);
 
-      if (existente && String(existente.id) !== String(id)) {
-        return res.status(409).json({
-          mensaje: "El documento pertenece a otro paciente"
+      if (!validacion.valido) {
+        return res.status(validacion.status).json({
+          mensaje: validacion.mensaje
         });
       }
     }
 
-    if (datosPermitidos.email) {
-      const emailExistente = await pacientesService.buscarPacientePorEmail(
-        datosPermitidos.email
-      );
-      if (emailExistente && String(emailExistente.id) !== String(id)) {
-        return res.status(409).json({
-          mensaje: "El correo electrónico pertenece a otro paciente"
-        });
-      }
+    const duplicado =
+      await validarDuplicados(datos, id);
+
+    if (duplicado) {
+      return res.status(duplicado.status).json({
+        mensaje: duplicado.mensaje
+      });
     }
 
-    const pacienteActualizado = await pacientesService.actualizarPacienteParcial(
-      id,
-      datosPermitidos
-    );
+    const paciente =
+      await pacientesService.actualizarPacienteParcial(
+        id, datos
+      );
 
-    res.status(200).json({
+    if (!paciente) {
+      return res.status(404).json({
+        mensaje: "Paciente no encontrado"
+      });
+    }
+
+    return res.status(200).json({
       mensaje: "Paciente actualizado parcialmente",
-      paciente: pacienteActualizado
+      paciente
     });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({
-        mensaje: "Ya existe un paciente con ese documento o correo electrónico"
-      });
-    }
-    if (error.code === "23503") {
-      return res.status(400).json({
-        mensaje: "Clave foránea inválida (el usuario indicado no existe)"
-      });
-    }
-    next(error);
+    return manejarError(error, res, next);
   }
 };
 
-// ========================================
 // DELETE
-// ========================================
 const eliminarPaciente = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const paciente = await pacientesService.obtenerPacientePorId(id);
+
+    const paciente =
+      await pacientesService.obtenerPacientePorId(id);
 
     if (!paciente) {
       return res.status(404).json({
@@ -292,26 +335,35 @@ const eliminarPaciente = async (req, res, next) => {
       });
     }
 
-    const tieneCitas = await citasService.pacienteTieneCitas(id);
+// ========================================
+// Integridad referencial PostgreSQL
+// Impedir eliminar registros con citas
+// ========================================
+    const tieneCitas =
+      await citasService.pacienteTieneCitas(id);
+
     if (tieneCitas) {
       return res.status(409).json({
-        mensaje: "No se puede eliminar el paciente porque tiene citas asociadas"
+        mensaje:
+          "No se puede eliminar el paciente porque tiene citas asociadas"
       });
     }
 
-    const pacienteEliminado = await pacientesService.eliminarPaciente(id);
+    const eliminado =
+      await pacientesService.eliminarPaciente(id);
+
+    if (!eliminado) {
+      return res.status(404).json({
+        mensaje: "Paciente no encontrado"
+      });
+    }
 
     return res.status(200).json({
       mensaje: "Paciente eliminado correctamente",
-      paciente: pacienteEliminado
+      paciente: eliminado
     });
   } catch (error) {
-    if (error.code === "23503") {
-      return res.status(409).json({
-        mensaje: "No se puede eliminar el paciente porque tiene citas u otros registros asociados en la base de datos"
-      });
-    }
-    next(error);
+    return manejarError(error, res, next);
   }
 };
 

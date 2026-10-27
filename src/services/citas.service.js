@@ -1,81 +1,74 @@
+
 const { consultar } = require("../config/database");
 
 // ========================================
-// Columnas estándar con alias camelCase
+// Columnas y formato de salida
 // ========================================
-const COLUMNAS_CITA = `
+
+const columnas = `
   id,
   paciente_id AS "pacienteId",
   medico_id AS "medicoId",
   consultorio_id AS "consultorioId",
   TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha,
-  SUBSTRING(hora::text FROM 1 FOR 5) AS hora,
+  TO_CHAR(hora, 'HH24:MI:SS') AS hora,
   motivo,
   estado
 `;
 
 // ========================================
-// Obtener todas las citas
+// Consultas
 // ========================================
+
 const obtenerCitas = async () => {
   const resultado = await consultar(`
-    SELECT ${COLUMNAS_CITA}
+    SELECT ${columnas}
     FROM public.citas
-    ORDER BY id
+    ORDER BY fecha, hora, id
   `);
+
   return resultado.rows;
 };
 
-// ========================================
-// Obtener por ID
-// ========================================
 const obtenerCitaPorId = async (id) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_CITA}
-    FROM public.citas
-    WHERE id = $1
-    `,
+    `SELECT ${columnas}
+     FROM public.citas
+     WHERE id = $1`,
     [id]
   );
+
   return resultado.rows[0] ?? null;
 };
 
-// ========================================
-// Obtener por paciente
-// ========================================
 const obtenerCitasPorPaciente = async (pacienteId) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_CITA}
-    FROM public.citas
-    WHERE paciente_id = $1
-    ORDER BY fecha, hora
-    `,
+    `SELECT ${columnas}
+     FROM public.citas
+     WHERE paciente_id = $1
+     ORDER BY fecha, hora`,
     [pacienteId]
   );
+
   return resultado.rows;
 };
 
-// ========================================
-// Obtener por médico
-// ========================================
 const obtenerCitasPorMedico = async (medicoId) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_CITA}
-    FROM public.citas
-    WHERE medico_id = $1
-    ORDER BY fecha, hora
-    `,
+    `SELECT ${columnas}
+     FROM public.citas
+     WHERE medico_id = $1
+     ORDER BY fecha, hora`,
     [medicoId]
   );
+
   return resultado.rows;
 };
 
 // ========================================
-// Comprobar conflicto del médico
+// Disponibilidad
 // ========================================
+
 const medicoTieneConflicto = async (
   medicoId,
   fecha,
@@ -83,23 +76,21 @@ const medicoTieneConflicto = async (
   citaIdExcluir = null
 ) => {
   const resultado = await consultar(
-    `
-    SELECT 1 FROM public.citas
-    WHERE medico_id = $1
-      AND fecha = $2::date
-      AND hora = $3::time
-      AND estado <> 'cancelada'
-      AND ($4::bigint IS NULL OR id <> $4::bigint)
-    LIMIT 1
-    `,
-    [medicoId, fecha, hora, citaIdExcluir ? Number(citaIdExcluir) : null]
+    `SELECT EXISTS (
+       SELECT 1
+       FROM public.citas
+       WHERE medico_id = $1
+         AND fecha = $2
+         AND hora = $3
+         AND estado <> 'cancelada'
+         AND ($4::bigint IS NULL OR id <> $4::bigint)
+     ) AS conflicto`,
+    [medicoId, fecha, hora, citaIdExcluir]
   );
-  return resultado.rowCount > 0;
+
+  return resultado.rows[0].conflicto;
 };
 
-// ========================================
-// Comprobar conflicto del consultorio
-// ========================================
 const consultorioTieneConflicto = async (
   consultorioId,
   fecha,
@@ -107,65 +98,38 @@ const consultorioTieneConflicto = async (
   citaIdExcluir = null
 ) => {
   const resultado = await consultar(
-    `
-    SELECT 1 FROM public.citas
-    WHERE consultorio_id = $1
-      AND fecha = $2::date
-      AND hora = $3::time
-      AND estado <> 'cancelada'
-      AND ($4::bigint IS NULL OR id <> $4::bigint)
-    LIMIT 1
-    `,
-    [consultorioId, fecha, hora, citaIdExcluir ? Number(citaIdExcluir) : null]
+    `SELECT EXISTS (
+       SELECT 1
+       FROM public.citas
+       WHERE consultorio_id = $1
+         AND fecha = $2
+         AND hora = $3
+         AND estado <> 'cancelada'
+         AND ($4::bigint IS NULL OR id <> $4::bigint)
+     ) AS conflicto`,
+    [consultorioId, fecha, hora, citaIdExcluir]
   );
-  return resultado.rowCount > 0;
+
+  return resultado.rows[0].conflicto;
 };
 
 // ========================================
-// Integridad referencial
+// Crear cita
 // ========================================
-const pacienteTieneCitas = async (pacienteId) => {
-  const resultado = await consultar(
-    `SELECT 1 FROM public.citas WHERE paciente_id = $1 LIMIT 1`,
-    [pacienteId]
-  );
-  return resultado.rowCount > 0;
-};
 
-const medicoTieneCitas = async (medicoId) => {
-  const resultado = await consultar(
-    `SELECT 1 FROM public.citas WHERE medico_id = $1 LIMIT 1`,
-    [medicoId]
-  );
-  return resultado.rowCount > 0;
-};
-
-const consultorioTieneCitas = async (consultorioId) => {
-  const resultado = await consultar(
-    `SELECT 1 FROM public.citas WHERE consultorio_id = $1 LIMIT 1`,
-    [consultorioId]
-  );
-  return resultado.rowCount > 0;
-};
-
-// ========================================
-// Crear cita (la API fuerza estado = 'programada')
-// ========================================
 const crearCita = async (datos) => {
   const resultado = await consultar(
-    `
-    INSERT INTO public.citas (
-      paciente_id,
-      medico_id,
-      consultorio_id,
-      fecha,
-      hora,
-      motivo,
-      estado
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, 'programada')
-    RETURNING ${COLUMNAS_CITA}
-    `,
+    `INSERT INTO public.citas (
+       paciente_id,
+       medico_id,
+       consultorio_id,
+       fecha,
+       hora,
+       motivo,
+       estado
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, 'programada')
+     RETURNING ${columnas}`,
     [
       datos.pacienteId,
       datos.medicoId,
@@ -175,122 +139,156 @@ const crearCita = async (datos) => {
       datos.motivo
     ]
   );
+
   return resultado.rows[0];
 };
 
 // ========================================
-// PUT - Actualizar cita (conserva estado actual)
+// PUT: conservar estado
 // ========================================
+
 const actualizarCita = async (id, datos) => {
   const resultado = await consultar(
-    `
-    UPDATE public.citas
-    SET
-      paciente_id = $1,
-      medico_id = $2,
-      consultorio_id = $3,
-      fecha = $4,
-      hora = $5,
-      motivo = $6
-    WHERE id = $7
-    RETURNING ${COLUMNAS_CITA}
-    `,
+    `UPDATE public.citas
+     SET paciente_id = $2,
+         medico_id = $3,
+         consultorio_id = $4,
+         fecha = $5,
+         hora = $6,
+         motivo = $7
+     WHERE id = $1
+     RETURNING ${columnas}`,
     [
+      id,
       datos.pacienteId,
       datos.medicoId,
       datos.consultorioId,
       datos.fecha,
       datos.hora,
-      datos.motivo,
-      id
+      datos.motivo
     ]
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// PATCH general (no modifica estado)
+// PATCH general: conservar estado
 // ========================================
+
 const actualizarCitaParcial = async (id, datos) => {
-  const asignaciones = [];
-  const valores = [];
-  let contador = 1;
+  const campos = {
+    pacienteId: "paciente_id",
+    medicoId: "medico_id",
+    consultorioId: "consultorio_id",
+    fecha: "fecha",
+    hora: "hora",
+    motivo: "motivo"
+  };
 
-  if (Object.hasOwn(datos, "pacienteId")) {
-    asignaciones.push(`paciente_id = $${contador++}`);
-    valores.push(datos.pacienteId);
-  }
+  const cambios = Object.entries(datos)
+    .filter(([campo]) => Object.hasOwn(campos, campo));
 
-  if (Object.hasOwn(datos, "medicoId")) {
-    asignaciones.push(`medico_id = $${contador++}`);
-    valores.push(datos.medicoId);
-  }
+  if (cambios.length === 0) return null;
 
-  if (Object.hasOwn(datos, "consultorioId")) {
-    asignaciones.push(`consultorio_id = $${contador++}`);
-    valores.push(datos.consultorioId);
-  }
+  const asignaciones = cambios.map(
+    ([campo], indice) =>
+      `${campos[campo]} = $${indice + 2}`
+  );
 
-  if (Object.hasOwn(datos, "fecha")) {
-    asignaciones.push(`fecha = $${contador++}`);
-    valores.push(datos.fecha);
-  }
+  const parametros = [
+    id,
+    ...cambios.map(([, valor]) => valor)
+  ];
 
-  if (Object.hasOwn(datos, "hora")) {
-    asignaciones.push(`hora = $${contador++}`);
-    valores.push(datos.hora);
-  }
+  const resultado = await consultar(
+    `UPDATE public.citas
+     SET ${asignaciones.join(", ")}
+     WHERE id = $1
+     RETURNING ${columnas}`,
+    parametros
+  );
 
-  if (Object.hasOwn(datos, "motivo")) {
-    asignaciones.push(`motivo = $${contador++}`);
-    valores.push(datos.motivo);
-  }
-
-  if (asignaciones.length === 0) {
-    return obtenerCitaPorId(id);
-  }
-
-  valores.push(id);
-  const sql = `
-    UPDATE public.citas
-    SET ${asignaciones.join(", ")}
-    WHERE id = $${contador}
-    RETURNING ${COLUMNAS_CITA}
-  `;
-
-  const resultado = await consultar(sql, valores);
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// PATCH especializado de estado
+// PATCH de estado
+// Validación atómica en PostgreSQL
 // ========================================
+
 const actualizarEstadoCita = async (id, nuevoEstado) => {
   const resultado = await consultar(
-    `
-    UPDATE public.citas
-    SET estado = $1
-    WHERE id = $2
-    RETURNING ${COLUMNAS_CITA}
-    `,
-    [nuevoEstado, id]
+    `UPDATE public.citas
+     SET estado = $2
+     WHERE id = $1
+       AND (
+         (estado = 'programada'
+          AND $2 IN ('confirmada', 'cancelada'))
+         OR
+         (estado = 'confirmada'
+          AND $2 IN ('atendida', 'cancelada'))
+       )
+     RETURNING ${columnas}`,
+    [id, nuevoEstado]
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// DELETE
+// Eliminar cita
 // ========================================
+
 const eliminarCita = async (id) => {
   const resultado = await consultar(
-    `
-    DELETE FROM public.citas
-    WHERE id = $1
-    RETURNING ${COLUMNAS_CITA}
-    `,
+    `DELETE FROM public.citas
+     WHERE id = $1
+     RETURNING ${columnas}`,
     [id]
   );
+
   return resultado.rows[0] ?? null;
+};
+
+// ========================================
+// Integridad referencial
+// ========================================
+
+const pacienteTieneCitas = async (pacienteId) => {
+  const resultado = await consultar(
+    `SELECT EXISTS (
+       SELECT 1 FROM public.citas
+       WHERE paciente_id = $1
+     ) AS existe`,
+    [pacienteId]
+  );
+
+  return resultado.rows[0].existe;
+};
+
+const medicoTieneCitas = async (medicoId) => {
+  const resultado = await consultar(
+    `SELECT EXISTS (
+       SELECT 1 FROM public.citas
+       WHERE medico_id = $1
+     ) AS existe`,
+    [medicoId]
+  );
+
+  return resultado.rows[0].existe;
+};
+
+const consultorioTieneCitas = async (consultorioId) => {
+  const resultado = await consultar(
+    `SELECT EXISTS (
+       SELECT 1 FROM public.citas
+       WHERE consultorio_id = $1
+     ) AS existe`,
+    [consultorioId]
+  );
+
+  return resultado.rows[0].existe;
 };
 
 module.exports = {

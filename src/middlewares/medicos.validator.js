@@ -1,63 +1,84 @@
-const {
-  body,
-  param
-} = require("express-validator");
+
+const { body, param } = require("express-validator");
 
 // ========================================
-// Validar ID del médico
+// Validación de identificadores BIGINT
+// ========================================
+
+const MAX_BIGINT = 9223372036854775807n;
+
+const esIdValido = (valor) => {
+  if (
+    typeof valor !== "string" &&
+    typeof valor !== "number"
+  ) {
+    return false;
+  }
+
+  const texto = String(valor);
+
+  if (!/^[1-9][0-9]*$/.test(texto)) {
+    return false;
+  }
+
+  if (
+    typeof valor === "number" &&
+    !Number.isSafeInteger(valor)
+  ) {
+    return false;
+  }
+
+  try {
+    return BigInt(texto) <= MAX_BIGINT;
+  } catch {
+    return false;
+  }
+};
+
+// ========================================
+// ID del médico
 // ========================================
 
 const validarIdMedico = [
   param("id")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El id debe ser un número entero positivo"
+      "El id debe ser un entero positivo válido"
     )
 ];
 
 // ========================================
-// Validar ID de especialidad
-// utilizado en búsquedas
+// ID de especialidad
 // ========================================
 
 const validarIdEspecialidad = [
   param("especialidadId")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "El id de la especialidad debe ser un número entero positivo"
+      "El id de especialidad debe ser un entero positivo válido"
     )
 ];
 
 // ========================================
 // POST y PUT
-// Todos los campos son obligatorios
 // ========================================
 
 const validarMedico = [
   body("usuarioId")
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
-    .withMessage("El usuarioId debe ser un entero positivo")
-    .toInt(),
+    .optional({ values: "null" })
+    .custom(esIdValido)
+    .withMessage(
+      "El usuarioId debe ser un entero positivo válido"
+    ),
 
   body("nombre")
     .isString()
-    .withMessage(
-      "El nombre debe ser texto"
-    )
+    .withMessage("El nombre debe ser texto")
+    .bail()
     .trim()
     .notEmpty()
-    .withMessage(
-      "El nombre es obligatorio"
-    )
-    .isLength({
-      min: 3,
-      max: 100
-    })
+    .withMessage("El nombre es obligatorio")
+    .isLength({ min: 3, max: 100 })
     .withMessage(
       "El nombre debe tener entre 3 y 100 caracteres"
     ),
@@ -67,11 +88,8 @@ const validarMedico = [
     .withMessage(
       "El registro médico debe ser texto"
     )
+    .bail()
     .trim()
-    .notEmpty()
-    .withMessage(
-      "El registro médico es obligatorio"
-    )
     .matches(/^RM-[0-9]{4,10}$/)
     .withMessage(
       "El registro médico debe tener un formato como RM-45871"
@@ -82,13 +100,16 @@ const validarMedico = [
     .withMessage(
       "El correo electrónico no es válido"
     )
+    .bail()
     .normalizeEmail(),
 
   body("telefono")
+    .optional({ values: "null" })
     .isString()
     .withMessage(
       "El teléfono debe ser texto"
     )
+    .bail()
     .trim()
     .matches(/^[0-9]{7,15}$/)
     .withMessage(
@@ -96,13 +117,10 @@ const validarMedico = [
     ),
 
   body("especialidadId")
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "La especialidad debe ser un número entero positivo"
-    )
-    .toInt(),
+      "La especialidad debe ser un entero positivo válido"
+    ),
 
   body("activo")
     .isBoolean()
@@ -114,31 +132,27 @@ const validarMedico = [
 
 // ========================================
 // PATCH
-// Todos los campos son opcionales
 // ========================================
 
 const validarMedicoParcial = [
   body("usuarioId")
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
-    .withMessage("El usuarioId debe ser un entero positivo")
-    .toInt(),
+    .optional({ values: "null" })
+    .custom(esIdValido)
+    .withMessage(
+      "El usuarioId debe ser un entero positivo válido"
+    ),
 
   body("nombre")
     .optional()
     .isString()
-    .withMessage(
-      "El nombre debe ser texto"
-    )
+    .withMessage("El nombre debe ser texto")
+    .bail()
     .trim()
     .notEmpty()
     .withMessage(
       "El nombre no puede estar vacío"
     )
-    .isLength({
-      min: 3,
-      max: 100
-    })
+    .isLength({ min: 3, max: 100 })
     .withMessage(
       "El nombre debe tener entre 3 y 100 caracteres"
     ),
@@ -149,6 +163,7 @@ const validarMedicoParcial = [
     .withMessage(
       "El registro médico debe ser texto"
     )
+    .bail()
     .trim()
     .matches(/^RM-[0-9]{4,10}$/)
     .withMessage(
@@ -161,14 +176,16 @@ const validarMedicoParcial = [
     .withMessage(
       "El correo electrónico no es válido"
     )
+    .bail()
     .normalizeEmail(),
 
   body("telefono")
-    .optional()
+    .optional({ values: "null" })
     .isString()
     .withMessage(
       "El teléfono debe ser texto"
     )
+    .bail()
     .trim()
     .matches(/^[0-9]{7,15}$/)
     .withMessage(
@@ -177,13 +194,10 @@ const validarMedicoParcial = [
 
   body("especialidadId")
     .optional()
-    .isInt({
-      min: 1
-    })
+    .custom(esIdValido)
     .withMessage(
-      "La especialidad debe ser un número entero positivo"
-    )
-    .toInt(),
+      "La especialidad debe ser un entero positivo válido"
+    ),
 
   body("activo")
     .optional()
@@ -193,6 +207,10 @@ const validarMedicoParcial = [
     )
     .toBoolean()
 ];
+
+// ========================================
+// Exportaciones
+// ========================================
 
 module.exports = {
   validarIdMedico,

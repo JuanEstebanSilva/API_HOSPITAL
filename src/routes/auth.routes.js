@@ -1,14 +1,22 @@
 const express = require("express");
+
 const { registrar, login } = require("../controllers/auth.controller");
+
 const {
   validarRegistro,
-  validarLogin
+  validarLogin,
 } = require("../middlewares/auth.validator");
+
 const validar = require("../middlewares/validar.middleware");
 
+// Middleware para validar JWT
 const autenticarJWT = require("../middlewares/auth.middleware");
 
 const router = express.Router();
+
+// ========================================
+// SCHEMAS DE AUTENTICACIÓN
+// ========================================
 
 /**
  * @swagger
@@ -49,6 +57,10 @@ const router = express.Router();
  *           example: ClaveSegura2026!
  */
 
+// ========================================
+// REGISTRO DE USUARIO
+// ========================================
+
 /**
  * @swagger
  * /api/auth/registro:
@@ -58,7 +70,7 @@ const router = express.Router();
  *     summary: Registrar un nuevo usuario
  *     description: >
  *       Registra un nuevo usuario utilizando bcrypt para proteger
- *       la contraseña. El rol es asignado por el servidor ("paciente") y no puede
+ *       la contraseña. El rol es asignado por el servidor y no puede
  *       ser definido por el cliente.
  *     requestBody:
  *       required: true
@@ -74,12 +86,11 @@ const router = express.Router();
  *       409:
  *         description: Correo electrónico ya registrado
  */
-router.post(
-  "/registro",
-  validarRegistro,
-  validar,
-  registrar
-);
+router.post("/registro", validarRegistro, validar, registrar);
+
+// ========================================
+// INICIO DE SESIÓN
+// ========================================
 
 /**
  * @swagger
@@ -88,7 +99,10 @@ router.post(
  *     tags:
  *       - Autenticación
  *     summary: Iniciar sesión
- *     description: Verifica credenciales de acceso (email y contraseña).
+ *     description: >
+ *       Verifica el email y la contraseña del usuario.
+ *       Si las credenciales son correctas, genera un JWT
+ *       que puede utilizarse para acceder a rutas protegidas.
  *     requestBody:
  *       required: true
  *       content:
@@ -105,12 +119,11 @@ router.post(
  *       403:
  *         description: Usuario deshabilitado
  */
-router.post(
-  "/login",
-  validarLogin,
-  validar,
-  login
-);
+router.post("/login", validarLogin, validar, login);
+
+// ========================================
+// PERFIL DEL USUARIO AUTENTICADO
+// ========================================
 
 /**
  * @swagger
@@ -135,8 +148,10 @@ router.get(
   (req, res) => {
     return res.status(200).json({
       mensaje: "Usuario autenticado mediante JWT",
+
       usuario: req.usuario,
-      clienteApi: req.clienteApi
+
+      clienteApi: req.clienteApi,
     });
   }
 );

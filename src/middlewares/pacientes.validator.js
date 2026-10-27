@@ -1,7 +1,14 @@
 const {
   body,
   param
-} = require("express-validator");
+} = require(
+  "express-validator"
+);
+
+
+// ========================================
+// Validar ID de paciente
+// ========================================
 
 const validarIdPaciente = [
   param("id")
@@ -13,10 +20,25 @@ const validarIdPaciente = [
     )
 ];
 
+
+// ========================================
+// POST / PUT
+// Validación completa de paciente
+// ========================================
+
 const validarPaciente = [
+
+  // ========================================
+  // Relación usuario ↔ paciente
+  // ========================================
+
   body("usuarioId")
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
+    .optional({
+      nullable: true
+    })
+    .isInt({
+      min: 1
+    })
     .withMessage(
       "El usuarioId debe ser un entero positivo"
     )
@@ -82,15 +104,23 @@ const validarPaciente = [
     )
 ];
 
+
 // ========================================
 // PATCH
 // Todos los campos son opcionales
 // ========================================
 
 const validarPacienteParcial = [
+
+  // ========================================
+  // Relación usuario ↔ paciente
+  // ========================================
+
   body("usuarioId")
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
+    .optional()
+    .isInt({
+      min: 1
+    })
     .withMessage(
       "El usuarioId debe ser un entero positivo"
     )
@@ -156,6 +186,11 @@ const validarPacienteParcial = [
       "La fecha de nacimiento debe tener formato YYYY-MM-DD"
     )
 ];
+
+
+// ========================================
+// Exportaciones
+// ========================================
 
 module.exports = {
   validarIdPaciente,

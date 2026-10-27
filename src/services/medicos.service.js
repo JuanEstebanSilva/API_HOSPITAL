@@ -1,262 +1,252 @@
 const { consultar } = require("../config/database");
 
 // ========================================
-// Columnas estándar con alias camelCase
+// Columnas de salida
 // ========================================
-const COLUMNAS_MEDICO = `
+
+const columnas = `
   id,
   usuario_id AS "usuarioId",
-  especialidad_id AS "especialidadId",
   nombre,
   registro_medico AS "registroMedico",
   email,
   telefono,
+  especialidad_id AS "especialidadId",
   activo
 `;
 
 // ========================================
-// Verificar si una especialidad tiene médicos
+// GET - Todos los médicos
 // ========================================
-const especialidadTieneMedicos = async (especialidadId) => {
-  const resultado = await consultar(
-    `SELECT 1 FROM public.medicos WHERE especialidad_id = $1 LIMIT 1`,
-    [especialidadId]
-  );
-  return resultado.rowCount > 0;
-};
 
-// ========================================
-// Obtener todos los médicos
-// ========================================
 const obtenerMedicos = async () => {
   const resultado = await consultar(`
-    SELECT ${COLUMNAS_MEDICO}
+    SELECT ${columnas}
     FROM public.medicos
     ORDER BY id
   `);
+
   return resultado.rows;
 };
 
 // ========================================
-// Obtener médico por ID
+// GET - Médico por ID
 // ========================================
+
 const obtenerMedicoPorId = async (id) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_MEDICO}
-    FROM public.medicos
-    WHERE id = $1
-    `,
-    [id]
+    `SELECT ${columnas}
+     FROM public.medicos
+     WHERE id = $1`,
+    [id],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Obtener médico por usuario
+// GET - Médico asociado a usuario
 // ========================================
+
 const obtenerMedicoPorUsuarioId = async (usuarioId) => {
+  if (usuarioId == null) return null;
+
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_MEDICO}
-    FROM public.medicos
-    WHERE usuario_id = $1
-    `,
-    [usuarioId]
+    `SELECT ${columnas}
+     FROM public.medicos
+     WHERE usuario_id = $1`,
+    [usuarioId],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Obtener médicos por especialidad
+// GET - Médicos por especialidad
 // ========================================
+
 const obtenerMedicosPorEspecialidad = async (especialidadId) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_MEDICO}
-    FROM public.medicos
-    WHERE especialidad_id = $1
-    ORDER BY id
-    `,
-    [especialidadId]
+    `SELECT ${columnas}
+     FROM public.medicos
+     WHERE especialidad_id = $1
+     ORDER BY id`,
+    [especialidadId],
   );
+
   return resultado.rows;
 };
 
 // ========================================
-// Buscar médico por registro médico
+// Buscar por registro médico
 // ========================================
+
 const buscarMedicoPorRegistro = async (registroMedico) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_MEDICO}
-    FROM public.medicos
-    WHERE LOWER(registro_medico) = LOWER($1)
-    `,
-    [registroMedico]
+    `SELECT ${columnas}
+     FROM public.medicos
+     WHERE LOWER(registro_medico) = LOWER($1)
+     LIMIT 1`,
+    [registroMedico],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Buscar médico por email
+// Buscar por correo
 // ========================================
+
 const buscarMedicoPorEmail = async (email) => {
   const resultado = await consultar(
-    `
-    SELECT ${COLUMNAS_MEDICO}
-    FROM public.medicos
-    WHERE LOWER(email) = LOWER($1)
-    `,
-    [email]
+    `SELECT ${columnas}
+     FROM public.medicos
+     WHERE LOWER(email) = LOWER($1)
+     LIMIT 1`,
+    [email],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Crear médico
+// POST - Crear médico
 // ========================================
-const crearMedico = async (datos) => {
-  const usuarioId = datos.usuarioId ?? null;
-  const telefono = datos.telefono ?? null;
-  const activo = datos.activo !== undefined ? datos.activo : true;
 
+const crearMedico = async (datos) => {
   const resultado = await consultar(
-    `
-    INSERT INTO public.medicos (
-      usuario_id,
-      especialidad_id,
-      nombre,
-      registro_medico,
-      email,
-      telefono,
-      activo
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING ${COLUMNAS_MEDICO}
-    `,
+    `INSERT INTO public.medicos (
+       usuario_id,
+       nombre,
+       registro_medico,
+       email,
+       telefono,
+       especialidad_id,
+       activo
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING ${columnas}`,
     [
-      usuarioId,
-      datos.especialidadId,
+      datos.usuarioId ?? null,
       datos.nombre,
       datos.registroMedico,
-      datos.email.toLowerCase(),
-      telefono,
-      activo
-    ]
+      datos.email,
+      datos.telefono ?? null,
+      datos.especialidadId,
+      datos.activo ?? true,
+    ],
   );
+
   return resultado.rows[0];
 };
 
 // ========================================
 // PUT - Actualización completa
 // ========================================
-const actualizarMedico = async (id, datos) => {
-  const usuarioId = datos.usuarioId !== undefined ? (datos.usuarioId ?? null) : null;
-  const telefono = datos.telefono ?? null;
-  const activo = datos.activo !== undefined ? datos.activo : true;
 
+const actualizarMedico = async (id, datos) => {
   const resultado = await consultar(
-    `
-    UPDATE public.medicos
-    SET
-      usuario_id = $1,
-      especialidad_id = $2,
-      nombre = $3,
-      registro_medico = $4,
-      email = $5,
-      telefono = $6,
-      activo = $7
-    WHERE id = $8
-    RETURNING ${COLUMNAS_MEDICO}
-    `,
+    `UPDATE public.medicos
+     SET usuario_id = $1,
+         nombre = $2,
+         registro_medico = $3,
+         email = $4,
+         telefono = $5,
+         especialidad_id = $6,
+         activo = $7
+     WHERE id = $8
+     RETURNING ${columnas}`,
     [
-      usuarioId,
-      datos.especialidadId,
+      datos.usuarioId ?? null,
       datos.nombre,
       datos.registroMedico,
-      datos.email.toLowerCase(),
-      telefono,
-      activo,
-      id
-    ]
+      datos.email,
+      datos.telefono ?? null,
+      datos.especialidadId,
+      datos.activo,
+      id,
+    ],
   );
+
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
 // PATCH - Actualización parcial
 // ========================================
+
 const actualizarMedicoParcial = async (id, datos) => {
-  const asignaciones = [];
-  const valores = [];
-  let contador = 1;
+  const campos = {
+    usuarioId: "usuario_id",
+    nombre: "nombre",
+    registroMedico: "registro_medico",
+    email: "email",
+    telefono: "telefono",
+    especialidadId: "especialidad_id",
+    activo: "activo",
+  };
 
-  if (Object.hasOwn(datos, "usuarioId")) {
-    asignaciones.push(`usuario_id = $${contador++}`);
-    valores.push(datos.usuarioId ?? null);
+  const cambios = Object.entries(datos).filter(([campo]) =>
+    Object.hasOwn(campos, campo),
+  );
+
+  if (cambios.length === 0) {
+    return null;
   }
 
-  if (Object.hasOwn(datos, "especialidadId")) {
-    asignaciones.push(`especialidad_id = $${contador++}`);
-    valores.push(datos.especialidadId);
-  }
+  const asignaciones = cambios.map(
+    ([campo], indice) => `${campos[campo]} = $${indice + 2}`,
+  );
 
-  if (Object.hasOwn(datos, "nombre")) {
-    asignaciones.push(`nombre = $${contador++}`);
-    valores.push(datos.nombre);
-  }
+  const parametros = [id, ...cambios.map(([, valor]) => valor)];
 
-  if (Object.hasOwn(datos, "registroMedico")) {
-    asignaciones.push(`registro_medico = $${contador++}`);
-    valores.push(datos.registroMedico);
-  }
+  const resultado = await consultar(
+    `UPDATE public.medicos
+     SET ${asignaciones.join(", ")}
+     WHERE id = $1
+     RETURNING ${columnas}`,
+    parametros,
+  );
 
-  if (Object.hasOwn(datos, "email")) {
-    asignaciones.push(`email = $${contador++}`);
-    valores.push(datos.email.toLowerCase());
-  }
-
-  if (Object.hasOwn(datos, "telefono")) {
-    asignaciones.push(`telefono = $${contador++}`);
-    valores.push(datos.telefono ?? null);
-  }
-
-  if (Object.hasOwn(datos, "activo")) {
-    asignaciones.push(`activo = $${contador++}`);
-    valores.push(datos.activo);
-  }
-
-  if (asignaciones.length === 0) {
-    return obtenerMedicoPorId(id);
-  }
-
-  valores.push(id);
-  const sql = `
-    UPDATE public.medicos
-    SET ${asignaciones.join(", ")}
-    WHERE id = $${contador}
-    RETURNING ${COLUMNAS_MEDICO}
-  `;
-
-  const resultado = await consultar(sql, valores);
   return resultado.rows[0] ?? null;
 };
 
 // ========================================
-// Eliminar médico
+// DELETE - Eliminar médico
 // ========================================
+
 const eliminarMedico = async (id) => {
   const resultado = await consultar(
-    `
-    DELETE FROM public.medicos
-    WHERE id = $1
-    RETURNING ${COLUMNAS_MEDICO}
-    `,
-    [id]
+    `DELETE FROM public.medicos
+     WHERE id = $1
+     RETURNING ${columnas}`,
+    [id],
   );
+
   return resultado.rows[0] ?? null;
 };
+
+// ========================================
+// Integridad referencial
+// Especialidad con médicos asociados
+// ========================================
+
+const especialidadTieneMedicos = async (especialidadId) => {
+  const resultado = await consultar(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM public.medicos
+       WHERE especialidad_id = $1
+     ) AS tiene_medicos`,
+    [especialidadId],
+  );
+
+  return resultado.rows[0].tiene_medicos;
+};
+
+// ========================================
+// Exportaciones
+// ========================================
 
 module.exports = {
   obtenerMedicos,
@@ -269,5 +259,5 @@ module.exports = {
   crearMedico,
   actualizarMedico,
   actualizarMedicoParcial,
-  eliminarMedico
+  eliminarMedico,
 };
