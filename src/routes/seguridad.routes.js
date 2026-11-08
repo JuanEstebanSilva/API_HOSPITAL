@@ -10,6 +10,8 @@ const router = express.Router();
  *       - Seguridad
  *     summary: Obtener información del cliente autenticado
  *     description: Retorna la identidad asociada a la API Key utilizada.
+ *     security:
+ *       - ApiKeyAuth: []
  *     responses:
  *       200:
  *         description: Cliente autenticado correctamente

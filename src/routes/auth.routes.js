@@ -1,10 +1,24 @@
 const express = require("express");
 
-const { registrar, login } = require("../controllers/auth.controller");
+const {
+  registrar,
+  login,
+  cambiarPassword,
+  generarRecuperacionAdmin,
+  restablecerPassword,
+  generarCodigos,
+  estadoCodigos,
+  restablecerConCodigo,
+} = require("../controllers/auth.controller");
 
 const {
   validarRegistro,
   validarLogin,
+  validarCambioPassword,
+  validarGenerarRecuperacion,
+  validarRestablecimiento,
+  validarGenerarCodigos,
+  validarRestablecerConCodigo,
 } = require("../middlewares/auth.validator");
 
 const validar = require("../middlewares/validar.middleware");
@@ -12,7 +26,26 @@ const validar = require("../middlewares/validar.middleware");
 // Middleware para validar JWT
 const autenticarJWT = require("../middlewares/auth.middleware");
 
+const autorizarRoles = require("../middlewares/roles.middleware");
+const { rateLimit } = require("express-rate-limit");
+const limiteReset = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
 const router = express.Router();
+
+// Límite de intentos de inicio de sesión
+const limiteLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    mensaje: "Demasiados intentos. Intente más tarde.",
+  },
+});
 
 // ========================================
 // SCHEMAS DE AUTENTICACIÓN
@@ -68,6 +101,8 @@ const router = express.Router();
  *     tags:
  *       - Autenticación
  *     summary: Registrar un nuevo usuario
+ *     security:
+ *       - ApiKeyAuth: []
  *     description: >
  *       Registra un nuevo usuario utilizando bcrypt para proteger
  *       la contraseña. El rol es asignado por el servidor y no puede
@@ -99,6 +134,7 @@ router.post("/registro", validarRegistro, validar, registrar);
  *     tags:
  *       - Autenticación
  *     summary: Iniciar sesión
+ *     security: []
  *     description: >
  *       Verifica el email y la contraseña del usuario.
  *       Si las credenciales son correctas, genera un JWT
@@ -119,8 +155,7 @@ router.post("/registro", validarRegistro, validar, registrar);
  *       403:
  *         description: Usuario deshabilitado
  */
-router.post("/login", validarLogin, validar, login);
-
+router.post("/login", limiteLogin, validarLogin, validar, login);
 // ========================================
 // PERFIL DEL USUARIO AUTENTICADO
 // ========================================
@@ -134,26 +169,258 @@ router.post("/login", validarLogin, validar, login);
  *     summary: Obtener perfil del usuario autenticado
  *     description: Requiere API Key y un JWT válido.
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Usuario autenticado correctamente
  *       401:
  *         description: Credenciales de autenticación ausentes o inválidas
  */
-router.get(
-  "/perfil",
+router.get("/perfil", autenticarJWT, (req, res) => {
+  return res.status(200).json({
+    mensaje: "Usuario autenticado mediante JWT",
+
+    usuario: req.usuario,
+
+    clienteApi: req.clienteApi,
+  });
+});
+
+/**
+ * @swagger
+ * /api/auth/cambiar-password:
+ *   patch:
+ *     tags: [Autenticación]
+ *     summary: Cambiar la contraseña propia y revocar JWT anteriores
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [passwordActual, passwordNueva, confirmarPassword]
+ *             properties:
+ *               passwordActual:
+ *                 type: string
+ *                 format: password
+ *               passwordNueva:
+ *                 type: string
+ *                 format: password
+ *               confirmarPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Contraseña cambiada y tokens anteriores revocados
+ *       400:
+ *         description: Datos inválidos o contraseña reutilizada
+ *       401:
+ *         description: JWT inválido o contraseña actual incorrecta
+ *       409:
+ *         description: Cambio concurrente de contraseña
+ */
+router.patch(
+  "/cambiar-password",
   autenticarJWT,
-  (req, res) => {
-    return res.status(200).json({
-      mensaje: "Usuario autenticado mediante JWT",
-
-      usuario: req.usuario,
-
-      clienteApi: req.clienteApi,
-    });
-  }
+  validarCambioPassword,
+  validar,
+  cambiarPassword,
 );
 
+/**
+ * @swagger
+ * /api/auth/recuperacion/admin/{usuarioId}:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Administrador autoriza recuperación y emite token de un solo uso
+ *     description: Verificar previamente la identidad por un procedimiento externo autorizado. El token solo se devuelve una vez.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: usuarioId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       201:
+ *         description: Token temporal generado
+ *       401:
+ *         description: JWT ausente o inválido
+ *       403:
+ *         description: Rol no autorizado
+ *       404:
+ *         description: Usuario inexistente o inactivo
+ */
+router.post(
+  "/recuperacion/admin/:usuarioId",
+  autenticarJWT,
+  autorizarRoles("administrador"),
+  limiteReset,
+  validarGenerarRecuperacion,
+  validar,
+  generarRecuperacionAdmin,
+);
+
+/**
+ * @swagger
+ * /api/auth/restablecer-password:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Restablecer contraseña usando token temporal
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, passwordNueva, confirmarPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               passwordNueva:
+ *                 type: string
+ *                 format: password
+ *               confirmarPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida y sesiones previas revocadas
+ *       400:
+ *         description: Token inválido o datos incorrectos
+ *       429:
+ *         description: Demasiados intentos
+ */
+router.post(
+  "/restablecer-password",
+  limiteReset,
+  validarRestablecimiento,
+  validar,
+  restablecerPassword,
+);
+
+/**
+ * @swagger
+ * /api/auth/codigos-recuperacion:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Generar ocho códigos de respaldo (invalida códigos anteriores)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [passwordActual]
+ *             properties:
+ *               passwordActual:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       201:
+ *         description: Ocho códigos visibles una sola vez
+ *       401:
+ *         description: JWT o contraseña actual inválidos
+ */
+router.post(
+  "/codigos-recuperacion",
+  autenticarJWT,
+  limiteReset,
+  validarGenerarCodigos,
+  validar,
+  generarCodigos,
+);
+/**
+ * @swagger
+ * /api/auth/codigos-recuperacion/estado:
+ *   get:
+ *     tags: [Autenticación]
+ *     summary: Consultar cantidad de códigos de respaldo disponibles
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cantidad disponible
+ */
+router.get("/codigos-recuperacion/estado", autenticarJWT, estadoCodigos);
+/**
+ * @swagger
+ * /api/auth/codigos-recuperacion/regenerar:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Revocar códigos anteriores y generar ocho nuevos
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [passwordActual]
+ *             properties:
+ *               passwordActual:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       201:
+ *         description: Nuevos códigos generados
+ */
+router.post(
+  "/codigos-recuperacion/regenerar",
+  autenticarJWT,
+  limiteReset,
+  validarGenerarCodigos,
+  validar,
+  generarCodigos,
+);
+/**
+ * @swagger
+ * /api/auth/restablecer-con-codigo:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Recuperar contraseña con un código de respaldo de un solo uso
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, codigo, passwordNueva, confirmarPassword]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               codigo:
+ *                 type: string
+ *               passwordNueva:
+ *                 type: string
+ *                 format: password
+ *               confirmarPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida
+ *       400:
+ *         description: Código o datos inválidos
+ *       429:
+ *         description: Demasiados intentos
+ */
+router.post(
+  "/restablecer-con-codigo",
+  limiteReset,
+  validarRestablecerConCodigo,
+  validar,
+  restablecerConCodigo,
+);
 module.exports = router;

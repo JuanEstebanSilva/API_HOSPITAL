@@ -104,17 +104,45 @@ app.use(helmet());
 // CORS
 // ========================================
 
+
+
+const origenesPermitidos = (
+  process.env.ALLOWED_ORIGIN || ""
+)
+  .split(",")
+  .map((origen) => origen.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGIN,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origenesPermitidos.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("Origen CORS no autorizado")
+      );
+    },
+
     methods: [
       "GET",
       "POST",
       "PUT",
       "PATCH",
       "DELETE",
+      "OPTIONS",
     ],
-  }),
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-API-Key",
+    ],
+  })
 );
 
 // ========================================
@@ -149,8 +177,55 @@ app.use("/api", limiter);
 // ========================================
 // API Key global
 // ========================================
+// ========================================
+// LAB 11.6.3 - Clientes web y privados
+// ========================================
 
-app.use("/api", validarApiKey);
+const rutasRecursosJWT = new Set([
+  "/pacientes",
+  "/especialidades",
+  "/medicos",
+  "/consultorios",
+  "/citas",
+  "/usuarios"
+]);
+
+const rutasAuthJWT = new Set([
+  "/auth/perfil",
+  "/auth/cambiar-password",
+  "/auth/recuperacion/admin",
+  "/auth/codigos-recuperacion"
+]);
+
+app.use("/api", (req, res, next) => {
+
+  // Login público, con validaciones y rate limit
+  if (
+    req.method === "POST" &&
+    req.path === "/auth/login"
+  ) {
+    return next();
+  }
+
+  // Recursos protegidos por JWT en sus routers
+  const recurso = "/" + req.path.split("/")[1];
+
+  if (rutasRecursosJWT.has(recurso)) {
+    return next();
+  }
+
+  // Rutas de autenticación protegidas por JWT
+  const esRutaAuthJWT = Array.from(rutasAuthJWT).some(
+    (ruta) => req.path === ruta || req.path.startsWith(ruta + "/")
+  );
+
+  if (esRutaAuthJWT) {
+    return next();
+  }
+
+  // Integraciones privadas y otras rutas
+  return validarApiKey(req, res, next);
+});
 
 // ========================================
 // Ruta principal
@@ -294,4 +369,3 @@ if (require.main === module) {
 }
 
 module.exports = { app, iniciarServidor };
-

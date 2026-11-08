@@ -236,8 +236,7 @@ const {
  *       Operación disponible únicamente para administradores.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     responses:
  *
@@ -291,8 +290,7 @@ router.get(
  *       No requiere enviar pacienteId ni medicoId.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     responses:
  *
@@ -345,8 +343,7 @@ router.get(
  *       Un paciente solamente puede consultar sus propias citas.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -422,8 +419,7 @@ router.get(
  *       Un médico solamente puede consultar sus propias citas.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -501,8 +497,7 @@ router.get(
  *       citas asociadas a su propio perfil.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -579,8 +574,7 @@ router.get(
  *       Toda nueva cita se crea con estado programada.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     requestBody:
  *       required: true
@@ -650,8 +644,7 @@ router.post(
  *       Operación disponible únicamente para administradores.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -737,8 +730,7 @@ router.put(
  *       No permite modificar el estado.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -824,8 +816,7 @@ router.patch(
  *       Aplica la máquina de estados de la cita.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -910,8 +901,7 @@ router.patch(
  *       Operación disponible únicamente para administradores.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *

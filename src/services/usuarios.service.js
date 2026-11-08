@@ -15,7 +15,8 @@ const columnasUsuario = `
   u.email,
   u.password_hash AS "passwordHash",
   r.nombre AS rol,
-  u.activo
+  u.activo,
+  u.version_sesion AS "versionSesion"
 `;
 
 // ========================================
@@ -86,7 +87,8 @@ const insertarUsuario = async ({ nombre, email, password, rol }) => {
        i.email,
        i.password_hash AS "passwordHash",
        r.nombre AS rol,
-       i.activo
+       i.activo,
+       i.version_sesion AS "versionSesion"
      FROM insertado i
      INNER JOIN public.roles r
        ON r.id = i.rol_id`,
@@ -163,6 +165,33 @@ const verificarCredenciales = async (email, password) => {
 };
 
 // ========================================
+// Cambiar contraseña con control de concurrencia
+// ========================================
+const cambiarPasswordPropio = async (usuarioId, passwordActual, passwordNueva) => {
+  const usuario = await obtenerUsuarioPorId(usuarioId);
+  if (!usuario || !usuario.activo || !usuario.passwordHash) {
+    return { estado: "NO_AUTORIZADO" };
+  }
+  if (!(await verificarPassword(passwordActual, usuario.passwordHash))) {
+    return { estado: "CLAVE_INCORRECTA" };
+  }
+  if (await verificarPassword(passwordNueva, usuario.passwordHash)) {
+    return { estado: "MISMA_CLAVE" };
+  }
+  const nuevoHash = await generarPasswordHash(passwordNueva);
+  const resultado = await consultar(
+    `UPDATE public.usuarios
+     SET password_hash = $1, version_sesion = version_sesion + 1
+     WHERE id = $2 AND activo = TRUE AND password_hash = $3
+     RETURNING id`,
+    [nuevoHash, usuarioId, usuario.passwordHash]
+  );
+  return resultado.rowCount === 1
+    ? { estado: "OK" }
+    : { estado: "CONFLICTO" };
+};
+
+// ========================================
 // Bootstrap administrativo
 //
 // Solo se ejecuta mediante el script.
@@ -219,7 +248,8 @@ const crearAdministradorInicial = async () => {
          u.id,
          u.nombre,
          u.email,
-         u.activo
+         u.activo,
+  u.version_sesion AS "versionSesion"
        FROM public.usuarios u
        INNER JOIN public.roles r
          ON r.id = u.rol_id
@@ -320,5 +350,6 @@ module.exports = {
   crearUsuario,
   crearUsuarioAdministrativo,
   verificarCredenciales,
+  cambiarPasswordPropio,
   crearAdministradorInicial,
 };

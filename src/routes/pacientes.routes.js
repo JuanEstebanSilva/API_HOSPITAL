@@ -158,8 +158,7 @@ const validar = require("../middlewares/validar.middleware");
  *       administrador o médico.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     responses:
  *
@@ -219,8 +218,7 @@ router.get(
  *       Solo los administradores y médicos pueden acceder.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -303,8 +301,7 @@ router.get(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     requestBody:
  *       required: true
@@ -375,8 +372,7 @@ router.post(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -467,8 +463,7 @@ router.put(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -575,8 +570,7 @@ router.patch(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *

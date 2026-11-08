@@ -195,7 +195,7 @@ async function run() {
 
     // P35: Acceso sin X-API-Key
     console.log("\n[P35] Acceso a ruta protegida sin cabecera X-API-Key...");
-    const resP35 = await fetch(`${BASE_URL}/api/citas/1`, {
+    const resP35 = await fetch(`${BASE_URL}/api/seguridad/cliente`, {
       headers: {
         Authorization: `Bearer ${tokenAdmin}`,
         "Content-Type": "application/json"

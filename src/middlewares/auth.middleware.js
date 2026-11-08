@@ -85,6 +85,12 @@ const autenticarJWT = async (req, res, next) => {
       });
     }
 
+    // Rechazar JWT emitidos antes de un cambio de contraseña.
+    if (!Number.isSafeInteger(payload.vs) ||
+        payload.vs !== usuario.versionSesion) {
+      return res.status(401).json({ mensaje: "Sesión revocada" });
+    }
+
     // ====================================
     // Utilizar rol vigente en PostgreSQL
     // ====================================

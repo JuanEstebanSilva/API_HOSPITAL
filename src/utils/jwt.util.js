@@ -31,7 +31,8 @@ const generarToken = (usuario) => {
 
   const payload = {
     email: usuario.email,
-    rol: usuario.rol
+    rol: usuario.rol,
+    vs: usuario.versionSesion
   };
 
   return jwt.sign(

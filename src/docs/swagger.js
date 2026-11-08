@@ -32,7 +32,7 @@ const options = {
           in: "header",
           name: "X-API-Key",
           description:
-            "API Key requerida para consumir los endpoints protegidos.",
+            "API Key para integraciones y clientes privados.",
         },
 
         BearerAuth: {
@@ -49,11 +49,9 @@ const options = {
     // Seguridad global
     // ========================================
 
-    security: [
-      {
-        ApiKeyAuth: [],
-      },
-    ],
+// LAB 11.6.4
+// Cada operación declara su seguridad explícitamente.
+security: [],
 
     // ========================================
     // Tags

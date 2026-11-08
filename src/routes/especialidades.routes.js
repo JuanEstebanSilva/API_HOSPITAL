@@ -145,8 +145,7 @@ const validar =
  *       con rol administrador, médico o paciente.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     responses:
  *
@@ -207,8 +206,7 @@ router.get(
  *       con rol administrador, médico o paciente.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -287,8 +285,7 @@ router.get(
  *       Solo un administrador puede crear especialidades.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     requestBody:
  *       required: true
@@ -359,8 +356,7 @@ router.post(
  *       una especialidad.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -448,8 +444,7 @@ router.put(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -535,8 +530,7 @@ router.patch(
  *       Solo un administrador puede eliminar especialidades.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *

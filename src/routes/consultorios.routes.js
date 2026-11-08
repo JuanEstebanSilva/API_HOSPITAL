@@ -172,8 +172,7 @@ const validar =
  *       autenticados con rol administrador, médico o paciente.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     responses:
  *
@@ -235,8 +234,7 @@ router.get(
  *       autenticados con rol administrador, médico o paciente.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -317,8 +315,7 @@ router.get(
  *       crear consultorios.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     requestBody:
  *       required: true
@@ -390,8 +387,7 @@ router.post(
  *       actualizar completamente un consultorio.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -479,8 +475,7 @@ router.put(
  *       Solo un administrador puede realizar esta operación.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *
@@ -568,8 +563,7 @@ router.patch(
  *       eliminar consultorios.
  *
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *
  *     parameters:
  *

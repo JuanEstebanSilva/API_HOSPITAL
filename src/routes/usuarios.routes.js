@@ -71,8 +71,7 @@ const router = express.Router();
  *       Permite a un administrador autenticado crear
  *       usuarios con rol medico o administrador.
  *     security:
- *       - ApiKeyAuth: []
- *         BearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
