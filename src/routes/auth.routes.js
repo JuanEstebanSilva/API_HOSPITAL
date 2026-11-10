@@ -30,7 +30,7 @@ const autorizarRoles = require("../middlewares/roles.middleware");
 const { rateLimit } = require("express-rate-limit");
 const limiteReset = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 30,
   standardHeaders: "draft-7",
   legacyHeaders: false,
 });
@@ -39,7 +39,7 @@ const router = express.Router();
 // Límite de intentos de inicio de sesión
 const limiteLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 30,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: {
