@@ -16,7 +16,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // ========================================
-// Certificado SSL de Supabase
+// Certificado SSL de Supabase / Conexión
 // ========================================
 
 const rutaCertificado = path.resolve(
@@ -24,16 +24,27 @@ const rutaCertificado = path.resolve(
   "../../certs/prod-ca-2021.crt"
 );
 
-if (!fs.existsSync(rutaCertificado)) {
-  throw new Error(
-    "No se encontró el certificado SSL de Supabase"
-  );
-}
+const esLocal =
+  process.env.DATABASE_URL.includes("localhost") ||
+  process.env.DATABASE_URL.includes("127.0.0.1");
 
-const certificado = fs.readFileSync(
-  rutaCertificado,
-  "utf8"
-);
+let sslConfig = false;
+
+if (!esLocal) {
+  if (!fs.existsSync(rutaCertificado)) {
+    throw new Error(
+      "No se encontró el certificado SSL de Supabase"
+    );
+  }
+  const certificado = fs.readFileSync(
+    rutaCertificado,
+    "utf8"
+  );
+  sslConfig = {
+    ca: certificado,
+    rejectUnauthorized: true,
+  };
+}
 
 // ========================================
 // Pool PostgreSQL
@@ -41,12 +52,7 @@ const certificado = fs.readFileSync(
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-
-  ssl: {
-    ca: certificado,
-    rejectUnauthorized: true,
-  },
-
+  ssl: sslConfig,
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 20000,

@@ -161,8 +161,10 @@ app.use(
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 300,
   standardHeaders: "draft-8",
+  // El login tiene su propio limitador: evitar doble contabilización.
+  skip: (req) => req.path === "/auth/login",
   legacyHeaders: false,
 
   message: {
@@ -187,7 +189,8 @@ const rutasRecursosJWT = new Set([
   "/medicos",
   "/consultorios",
   "/citas",
-  "/usuarios"
+  "/usuarios",
+  "/estadisticas"
 ]);
 
 const rutasAuthJWT = new Set([
@@ -198,6 +201,22 @@ const rutasAuthJWT = new Set([
 ]);
 
 app.use("/api", (req, res, next) => {
+
+  // La emisión del token exige JWT y rol administrador dentro de auth.routes.
+  // No colocar una API Key privada en el navegador.
+  if (req.method === "POST" && /^\/auth\/recuperacion\/admin\/[1-9]\d*$/.test(req.path)) {
+    return next();
+  }
+
+  // Token temporal administrativo: el titular lo usa sin sesión ni API Key.
+  if (req.method === "POST" && req.path === "/auth/restablecer-password") {
+    return next();
+  }
+
+  // Recuperación pública mediante código de respaldo (rate limit en auth.routes).
+  if (req.method === "POST" && req.path === "/auth/restablecer-con-codigo") {
+    return next();
+  }
 
   // Login público, con validaciones y rate limit
   if (
@@ -284,6 +303,9 @@ app.use(
   "/api/usuarios",
   usuariosRoutes
 );
+
+// LAB 12.3.3 - Totales administrativos protegidos por JWT
+app.use("/api/estadisticas", require("./routes/estadisticas.routes"));
 
 // ========================================
 // Seguridad

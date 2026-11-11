@@ -20,13 +20,23 @@ const columnas = `
 // Consultas
 // ========================================
 
+// LAB 12.10: enriquecer únicamente el listado administrativo con datos
+// de presentación. Se conservan los identificadores y el contrato existente.
 const obtenerCitas = async () => {
   const resultado = await consultar(`
-    SELECT ${columnas}
-    FROM public.citas
-    ORDER BY fecha, hora, id
+    SELECT c.id, c.paciente_id AS "pacienteId",
+      c.medico_id AS "medicoId", c.consultorio_id AS "consultorioId",
+      TO_CHAR(c.fecha, 'YYYY-MM-DD') AS fecha,
+      TO_CHAR(c.hora, 'HH24:MI:SS') AS hora,
+      c.motivo, c.estado,
+      p.nombre AS "pacienteNombre", m.nombre AS "medicoNombre",
+      co.nombre AS "consultorioNombre", co.codigo AS "consultorioCodigo"
+    FROM public.citas AS c
+    LEFT JOIN public.pacientes AS p ON p.id = c.paciente_id
+    LEFT JOIN public.medicos AS m ON m.id = c.medico_id
+    LEFT JOIN public.consultorios AS co ON co.id = c.consultorio_id
+    ORDER BY c.fecha, c.hora, c.id
   `);
-
   return resultado.rows;
 };
 
@@ -43,10 +53,16 @@ const obtenerCitaPorId = async (id) => {
 
 const obtenerCitasPorPaciente = async (pacienteId) => {
   const resultado = await consultar(
-    `SELECT ${columnas}
-     FROM public.citas
-     WHERE paciente_id = $1
-     ORDER BY fecha, hora`,
+    `SELECT c.id, c.paciente_id AS "pacienteId", c.medico_id AS "medicoId",
+       c.consultorio_id AS "consultorioId", TO_CHAR(c.fecha, 'YYYY-MM-DD') AS fecha,
+       TO_CHAR(c.hora, 'HH24:MI:SS') AS hora, c.motivo, c.estado,
+       p.nombre AS "pacienteNombre", m.nombre AS "medicoNombre", co.nombre AS "consultorioNombre", co.codigo AS "consultorioCodigo"
+     FROM public.citas c
+     JOIN public.pacientes p ON p.id = c.paciente_id
+     JOIN public.medicos m ON m.id = c.medico_id
+     JOIN public.consultorios co ON co.id = c.consultorio_id
+     WHERE c.paciente_id = $1
+     ORDER BY c.fecha, c.hora`,
     [pacienteId]
   );
 
@@ -55,10 +71,16 @@ const obtenerCitasPorPaciente = async (pacienteId) => {
 
 const obtenerCitasPorMedico = async (medicoId) => {
   const resultado = await consultar(
-    `SELECT ${columnas}
-     FROM public.citas
-     WHERE medico_id = $1
-     ORDER BY fecha, hora`,
+    `SELECT c.id, c.paciente_id AS "pacienteId", c.medico_id AS "medicoId",
+       c.consultorio_id AS "consultorioId", TO_CHAR(c.fecha, 'YYYY-MM-DD') AS fecha,
+       TO_CHAR(c.hora, 'HH24:MI:SS') AS hora, c.motivo, c.estado,
+       p.nombre AS "pacienteNombre", m.nombre AS "medicoNombre", co.nombre AS "consultorioNombre", co.codigo AS "consultorioCodigo"
+     FROM public.citas c
+     JOIN public.pacientes p ON p.id = c.paciente_id
+     JOIN public.medicos m ON m.id = c.medico_id
+     JOIN public.consultorios co ON co.id = c.consultorio_id
+     WHERE c.medico_id = $1
+     ORDER BY c.fecha, c.hora`,
     [medicoId]
   );
 
@@ -291,6 +313,22 @@ const consultorioTieneCitas = async (consultorioId) => {
   return resultado.rows[0].existe;
 };
 
+// LAB 12.7: cambios de estado limitados por la vinculación real de PostgreSQL.
+const cambiarEstadoPropio = async ({ citaId, usuarioId, rol, estado }) => {
+  const esPaciente = rol === "paciente";
+  const tabla = esPaciente ? "pacientes" : "medicos";
+  const columna = esPaciente ? "paciente_id" : "medico_id";
+  const origen = esPaciente ? ["programada", "confirmada"] : estado === "confirmada" ? ["programada"] : ["confirmada"];
+  const resultado = await consultar(
+    `UPDATE public.citas AS c SET estado = $3
+     WHERE c.id = $1 AND c.estado = ANY($4::text[])
+       AND EXISTS (SELECT 1 FROM public.${tabla} AS p WHERE p.id = c.${columna} AND p.usuario_id = $2)
+     RETURNING ${columnas}`,
+    [citaId, usuarioId, estado, origen]
+  );
+  return resultado.rows[0] ?? null;
+};
+
 module.exports = {
   obtenerCitas,
   obtenerCitaPorId,
@@ -305,5 +343,6 @@ module.exports = {
   actualizarCita,
   actualizarCitaParcial,
   actualizarEstadoCita,
-  eliminarCita
+  eliminarCita,
+  cambiarEstadoPropio
 };

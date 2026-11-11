@@ -97,6 +97,7 @@ const autenticarJWT = async (req, res, next) => {
 
     req.usuario = {
       id: String(usuario.id),
+      nombre: usuario.nombre,
       email: usuario.email,
       rol: usuario.rol
     };

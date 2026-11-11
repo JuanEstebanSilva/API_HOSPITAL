@@ -499,6 +499,53 @@ const eliminarCita = async (req, res, next) => {
 // Exportaciones
 // ========================================
 
+// LAB 12.7 - Acciones propias, sin aceptar IDs de propietario desde el navegador.
+const miContexto = async (req, res, next) => {
+  try {
+    const ficha = req.usuario.rol === "paciente"
+      ? await pacientesService.obtenerPacientePorUsuarioId(req.usuario.id)
+      : req.usuario.rol === "medico"
+        ? await medicosService.obtenerMedicoPorUsuarioId(req.usuario.id)
+        : null;
+    return res.status(200).json({ usuario: req.usuario, ficha });
+  } catch (error) { return next(error); }
+};
+
+const solicitarMiCita = async (req, res, next) => {
+  try {
+    const paciente = await pacientesService.obtenerPacientePorUsuarioId(req.usuario.id);
+    if (!paciente) return res.status(403).json({ mensaje: "Debes vincular tu cuenta a una ficha de paciente antes de solicitar citas" });
+    const datos = { ...datosCuerpo(req), pacienteId: paciente.id };
+    const fechaHora = new Date(`${datos.fecha}T${datos.hora}:00`);
+    if (!Number.isFinite(fechaHora.getTime()) || fechaHora <= new Date()) {
+      return res.status(400).json({ mensaje: "Selecciona una fecha y hora futuras" });
+    }
+    const relacion = await validarRelacionesCita(datos);
+    if (relacion) return responderValidacion(res, relacion);
+    const disponibilidad = await validarDisponibilidad(datos);
+    if (disponibilidad) return responderValidacion(res, disponibilidad);
+    const cita = await citasService.crearCita(datos);
+    return res.status(201).json({ mensaje: "Cita solicitada correctamente", cita });
+  } catch (error) { return responderErrorSQL(error, res, next); }
+};
+
+const cambiarMiEstadoCita = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const rol = req.usuario.rol;
+    const estado = rol === "paciente" ? "cancelada" : req.params.accion === "confirmar" ? "confirmada" : "atendida";
+    const cita = await citasService.cambiarEstadoPropio({ citaId: id, usuarioId: req.usuario.id, rol, estado });
+    if (cita) return res.status(200).json({ mensaje: "Estado actualizado correctamente", cita });
+    const actual = await citasService.obtenerCitaPorId(id);
+    if (!actual) return res.status(404).json({ mensaje: "Cita no encontrada" });
+    // No revelar el estado de citas de otros usuarios.
+    const ficha = rol === "paciente" ? await pacientesService.obtenerPacientePorUsuarioId(req.usuario.id) : await medicosService.obtenerMedicoPorUsuarioId(req.usuario.id);
+    const propietarioId = rol === "paciente" ? actual.pacienteId : actual.medicoId;
+    if (!ficha || String(ficha.id) !== String(propietarioId)) return res.status(403).json({ mensaje: "No tienes autorización para modificar esta cita" });
+    return res.status(409).json({ mensaje: `No se permite esta transición desde el estado ${actual.estado}` });
+  } catch (error) { return next(error); }
+};
+
 module.exports = {
   obtenerCitas,
   obtenerCitaPorId,
@@ -510,4 +557,7 @@ module.exports = {
   actualizarCitaParcial,
   actualizarEstadoCita,
   eliminarCita,
+  miContexto,
+  solicitarMiCita,
+  cambiarMiEstadoCita,
 };

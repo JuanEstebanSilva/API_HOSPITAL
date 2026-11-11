@@ -119,7 +119,7 @@ const actualizarEspecialidad = async (req, res, next) => {
         datosPermitidos.nombre
       );
 
-    if (existente && existente.id !== Number(id)) {
+    if (existente && String(existente.id) !== String(id)) {
       return res.status(409).json({
         mensaje: "Ya existe otra especialidad con ese nombre"
       });
@@ -175,7 +175,7 @@ const actualizarEspecialidadParcial = async (
           datosPermitidos.nombre
         );
 
-      if (existente && existente.id !== Number(id)) {
+      if (existente && String(existente.id) !== String(id)) {
         return res.status(409).json({
           mensaje: "Ya existe otra especialidad con ese nombre"
         });

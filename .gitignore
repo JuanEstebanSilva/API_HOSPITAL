@@ -2,3 +2,14 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Frontend React / Vite
+api-hospital-frontend/node_modules/
+api-hospital-frontend/dist/
+api-hospital-frontend/.env
+api-hospital-frontend/.env.*
+!api-hospital-frontend/.env.example
+
+# Temporary artifacts
+_tmp_*
+*.log

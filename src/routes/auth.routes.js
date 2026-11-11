@@ -42,8 +42,12 @@ const limiteLogin = rateLimit({
   limit: 30,
   standardHeaders: "draft-7",
   legacyHeaders: false,
+  // Solo los rechazos de credenciales consumen intentos.
+  // No penalizar accesos válidos ni errores de Supabase (503).
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode !== 401,
   message: {
-    mensaje: "Demasiados intentos. Intente más tarde.",
+    mensaje: "Demasiados intentos fallidos. Espere antes de volver a intentar.",
   },
 });
 

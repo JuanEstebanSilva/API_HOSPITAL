@@ -216,6 +216,83 @@ const {
  */
 
 
+/**
+ * @openapi
+ * /api/citas/mi-contexto:
+ *   get:
+ *     tags: [Citas]
+ *     summary: Consultar ficha propia vinculada (paciente o médico)
+ *     security: [{BearerAuth: []}]
+ *     responses:
+ *       200: {description: Identidad y ficha vinculada}
+ *       401: {description: No autenticado}
+ * /api/citas/mis-solicitudes:
+ *   post:
+ *     tags: [Citas]
+ *     summary: Paciente solicita una cita para sí mismo
+ *     description: El pacienteId se deriva del JWT y de su ficha vinculada, no del cuerpo.
+ *     security: [{BearerAuth: []}]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [medicoId, consultorioId, fecha, hora, motivo]
+ *             properties:
+ *               medicoId: {type: integer, example: 1}
+ *               consultorioId: {type: integer, example: 1}
+ *               fecha: {type: string, format: date}
+ *               hora: {type: string, example: '10:30'}
+ *               motivo: {type: string, example: Consulta de control}
+ *     responses:
+ *       201: {description: Cita creada}
+ *       403: {description: Ficha no vinculada}
+ *       409: {description: Horario ocupado}
+ * /api/citas/{id}/cancelar:
+ *   patch:
+ *     tags: [Citas]
+ *     summary: Paciente cancela una cita propia
+ *     security: [{BearerAuth: []}]
+ *     parameters:
+ *       - {in: path, name: id, required: true, schema: {type: integer}}
+ *     responses:
+ *       200: {description: Cancelada}
+ *       403: {description: Cita ajena}
+ *       409: {description: Estado no admite cancelación}
+ * /api/citas/{id}/confirmar:
+ *   patch:
+ *     tags: [Citas]
+ *     summary: Médico confirma una cita asignada
+ *     security: [{BearerAuth: []}]
+ *     parameters:
+ *       - {in: path, name: id, required: true, schema: {type: integer}}
+ *     responses:
+ *       200: {description: Confirmada}
+ *       403: {description: Cita ajena}
+ * /api/citas/{id}/atender:
+ *   patch:
+ *     tags: [Citas]
+ *     summary: Médico marca como atendida una cita confirmada y asignada
+ *     security: [{BearerAuth: []}]
+ *     parameters:
+ *       - {in: path, name: id, required: true, schema: {type: integer}}
+ *     responses:
+ *       200: {description: Atendida}
+ *       403: {description: Cita ajena}
+ */
+// LAB 12.7: rutas específicas y protegidas para el usuario autenticado.
+// Deben preceder a /:id para evitar conflictos de enrutamiento.
+router.get("/mi-contexto", autenticarJWT, autorizarRoles("paciente", "medico"), citasController.miContexto);
+router.post(
+  "/mis-solicitudes", autenticarJWT, autorizarRoles("paciente"),
+  [validarCreacionCita[1], validarCreacionCita[2], validarCreacionCita[3], validarCreacionCita[4], validarCreacionCita[5]],
+  validar, citasController.solicitarMiCita
+);
+router.patch("/:id/cancelar", autenticarJWT, autorizarRoles("paciente"), validarIdCita, validar, citasController.cambiarMiEstadoCita);
+router.patch("/:id/confirmar", autenticarJWT, autorizarRoles("medico"), validarIdCita, validar, (req, res, next) => { req.params.accion = "confirmar"; next(); }, citasController.cambiarMiEstadoCita);
+router.patch("/:id/atender", autenticarJWT, autorizarRoles("medico"), validarIdCita, validar, (req, res, next) => { req.params.accion = "atender"; next(); }, citasController.cambiarMiEstadoCita);
+
 // ========================================
 // GET
 // Obtener todas las citas
