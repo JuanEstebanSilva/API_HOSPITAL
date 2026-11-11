@@ -127,6 +127,15 @@ API_HOSPITAL/
 │   ├── 06_indices_adicionales_OPCIONAL.sql # Índices de optimización y unicidad
 │   └── historico/                  # Trazabilidad de laboratorios previos
 │
+├── extraible/                      # [IGNORADO EN GIT] Archivo histórico y documentación previa
+│   ├── bloque_7/                   # Guías e insumos de los Bloques 7.2 a 7.5.1
+│   ├── bloque_8/                   # Guías y diagramas del Bloque 8
+│   ├── bloque_10/                  # Colección Postman del Bloque 10
+│   ├── bloque_11/                  # Guía de pasos, Postman e insumos del Bloque 11
+│   ├── bloque_12_frontend/         # PDFs de requerimientos, insumos BE y FE originales
+│   ├── evidencias_e_informes/      # Informes Word .docx, capturas reales y scripts generadores
+│   └── README.md                   # Documentación explicativa de la carpeta extraíble
+│
 ├── scripts/                        # Suites de pruebas y utilidades de automatización
 │   ├── setup_local_db.js           # Inicialización y migración completa de BD PostgreSQL
 │   ├── seed_comprehensive_demo.js  # Carga de datos de prueba para todas las suites
@@ -137,6 +146,7 @@ API_HOSPITAL/
 │   ├── validar-bloque-8-seguridad.js # Suite de pruebas de seguridad RBAC y BOLA (SEG)
 │   ├── validar-bloque-11.js        # Suite de 26 pruebas completas del Bloque 11
 │   ├── test_frontend_api_integration.js # Validación de endpoints del Frontend
+│   ├── test_swagger_functional.py  # Validación automatizada de Swagger UI y OpenAPI en navegador
 │   └── test_e2e_browser.py         # Pruebas End-to-End en navegador real (Playwright)
 │
 ├── src/                            # Código fuente del Backend Express
@@ -157,6 +167,13 @@ API_HOSPITAL/
 ├── package.json                    # Dependencias y scripts NPM del backend
 └── README.md                       # Documentación técnica general
 ```
+
+### 4.1 Sobre la Carpeta `extraible/` (Aislada y Segura para Extracción)
+
+Para mantener el repositorio de producción 100% limpio y libre de archivos temporales o insumos de laboratorios pasados, se consolidó la carpeta `extraible/`:
+- **Propósito:** Contener ordenadamente todos los archivos `.md` de bloques previos, colecciones Postman históricas, PDFs de enunciados, scripts generadores de informes académicos y capturas de evidencias.
+- **Aislamiento en Git:** La carpeta se encuentra configurada en `.gitignore`, por lo que **no forma parte del control de versiones**.
+- **Independencia Operativa:** Esta carpeta no afecta en lo absoluto el procesamiento, ejecución, dependencias ni pruebas de la aplicación. **Puede ser extraída, comprimida o eliminada en cualquier momento sin alterar el correcto funcionamiento del sistema.**
 
 ---
 
@@ -254,6 +271,7 @@ El proyecto dispone de un conjunto exhaustivo de scripts de prueba automatizados
 | `npm run test:seguridad` | `scripts/validar-bloque-8-seguridad.js` | Pruebas SEG-01 a SEG-08 + P06 + P35: control de acceso BOLA/IDOR, autorización RBAC y API Key. |
 | `npm run test:bloque11` | `scripts/validar-bloque-11.js` | Suite oficial de 26 pruebas del Bloque 11: versionado de sesión, tokens de recuperación, códigos de respaldo y CORS. |
 | `npm run test:fe` | `scripts/test_frontend_api_integration.js` | Validación completa de endpoints consumidos por la SPA de React (estadísticas, contexto, acciones de cita). |
+| `npm run test:swagger` | `scripts/test_swagger_functional.py` | Auditoría funcional automatizada de Swagger UI y especificación OpenAPI 3.0.3 en navegador real (Edge/Playwright). |
 | `npm run test:e2e` | `scripts/test_e2e_browser.py` | Pruebas End-to-End con Playwright navegando en navegador real (Login Admin/Médico/Paciente, Dashboard y Screenshots). |
 | `npm test` | `scripts/validar-bloques-7.js` | Batería integral de pruebas funcionales de negocio (Bloques 7.2 a 7.5). |
 | `npm --prefix api-hospital-frontend run lint` | Oxlint | Análisis estático de código del frontend (0 advertencias, 0 errores en 35 archivos). |

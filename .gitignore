@@ -10,6 +10,9 @@ api-hospital-frontend/.env
 api-hospital-frontend/.env.*
 !api-hospital-frontend/.env.example
 
+# Archivo historico / Documentacion previa extraible
+extraible/
+
 # Temporary artifacts
 _tmp_*
 *.log

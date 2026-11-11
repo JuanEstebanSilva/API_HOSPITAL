@@ -15,6 +15,7 @@
     "test:seguridad": "node scripts/validar-bloque-8-seguridad.js",
     "test:bloque11": "node scripts/validar-bloque-11.js",
     "test:fe": "node scripts/test_frontend_api_integration.js",
+    "test:swagger": "python scripts/test_swagger_functional.py",
     "test:e2e": "python scripts/test_e2e_browser.py",
     "test:db": "node scripts/probar-conexion.js"
   },

@@ -113,6 +113,13 @@ async function run() {
     const horaTest = "10:00";
     const consId = 1;
     const medId = 1;
+
+    // Limpiar cita de prueba previa si existiera para garantizar idempotencia
+    await consultar(
+      "DELETE FROM public.citas WHERE (fecha = $1 AND hora = $2) OR motivo = 'Consulta médica preventiva semestral'",
+      [fechaTest, `${horaTest}:00`]
+    );
+
     const solCita = await request("/api/citas/mis-solicitudes", {
       method: "POST",
       headers: { Authorization: `Bearer ${tokenPac}` },

@@ -178,8 +178,17 @@ router.get(
 );
 
 /**
- * LAB 12.6.3.1: identidad de las cuentas asociadas a fichas de pacientes.
- * Solo administradores; nunca se devuelven hashes ni credenciales.
+ * @swagger
+ * /api/usuarios/cuentas-vinculadas-pacientes:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Consultar cuentas asociadas a fichas de pacientes (administrador)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200: { description: Cuentas vinculadas sin información sensible }
+ *       401: { description: No autenticado }
+ *       403: { description: Sin permisos }
  */
 router.get(
   "/cuentas-vinculadas-pacientes",
@@ -221,7 +230,67 @@ router.post(
   crearUsuario
 );
 
+/**
+ * @swagger
+ * /api/usuarios/{id}/estado:
+ *   patch:
+ *     tags: [Usuarios]
+ *     summary: Activar o desactivar cuenta de usuario (administrador)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [activo]
+ *             properties:
+ *               activo: { type: boolean, example: true }
+ *     responses:
+ *       200: { description: Estado del usuario actualizado }
+ *       400: { description: Datos inválidos }
+ *       401: { description: No autenticado }
+ *       403: { description: Sin permisos }
+ *       404: { description: Usuario no encontrado }
+ */
 router.patch("/:id/estado", autenticarJWT, autorizarRoles("administrador"), validarEstadoUsuario, validar, cambiarEstadoUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}:
+ *   put:
+ *     tags: [Usuarios]
+ *     summary: Actualizar nombre o email de un usuario (administrador)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nombre, email]
+ *             properties:
+ *               nombre: { type: string, example: "Dr. Nuevo Nombre" }
+ *               email: { type: string, format: email, example: "nuevo.email@hospital.com" }
+ *     responses:
+ *       200: { description: Usuario actualizado }
+ *       400: { description: Datos inválidos }
+ *       401: { description: No autenticado }
+ *       403: { description: Sin permisos }
+ *       404: { description: Usuario no encontrado }
+ */
 router.put("/:id", autenticarJWT, autorizarRoles("administrador"), validarEdicionUsuario, validar, actualizarUsuario);
 
 module.exports = router;
