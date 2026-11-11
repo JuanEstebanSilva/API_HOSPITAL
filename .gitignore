@@ -13,6 +13,11 @@ api-hospital-frontend/.env.*
 # Archivo historico / Documentacion previa extraible
 extraible/
 
+# Screenshots y artefactos generados en tests
+e2e_screenshots/
+__pycache__/
+*.pyc
+
 # Temporary artifacts
 _tmp_*
 *.log

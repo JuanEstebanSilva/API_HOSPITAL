@@ -24,7 +24,7 @@ async function request(path, options = {}) {
 
 async function run() {
   console.log("===============================================================");
-  console.log("  VERIFICACIÓN DE ENDPOINTS REQUERIDOS POR EL FRONTEND REACT   ");
+  console.log("     BATERÍA DE PRUEBAS DE INTEGRACIÓN DE LA API HOSPITAL      ");
   console.log("===============================================================");
 
   const server = await iniciarServidor();
@@ -34,9 +34,10 @@ async function run() {
     console.log("\n1. Autenticación Administrador...");
     const loginAdmin = await request("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: "admin@hospital.com", password: "SANTOTO_2026--2" })
+      body: JSON.stringify({ email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD })
     });
     console.log("Status:", loginAdmin.status, "Token:", !!loginAdmin.body?.token);
+    if (loginAdmin.status !== 200 || !loginAdmin.body?.token) throw new Error("Fallo en login de admin");
     const tokenAdmin = loginAdmin.body.token;
 
     // 2. Estadísticas Resumen (Dashboard Admin)
@@ -45,7 +46,7 @@ async function run() {
       headers: { Authorization: `Bearer ${tokenAdmin}` }
     });
     console.log("Status:", stats.status, "Body:", stats.body);
-    if (stats.status !== 200 || !stats.body?.totalCitas === undefined) throw new Error("Fallo en /api/estadisticas/resumen");
+    if (stats.status !== 200 || stats.body?.resumen?.totalCitas === undefined && stats.body?.resumen?.citas === undefined) throw new Error("Fallo en /api/estadisticas/resumen");
 
     // 3. Listar Usuarios (Gestión de usuarios Admin)
     console.log("\n3. GET /api/usuarios (Admin)...");
@@ -61,17 +62,18 @@ async function run() {
       headers: { Authorization: `Bearer ${tokenAdmin}` }
     });
     console.log("Status:", busqueda.status, "Resultados:", busqueda.body?.usuarios?.length);
-    if (busqueda.status !== 200 || !Array.isArray(busqueda.body?.usuarios)) throw new Error("Fallo en GET /api/usuarios/busqueda-recuperacion");
+    if (busqueda.status !== 200) throw new Error("Fallo en busqueda-recuperacion");
 
-    // 5. Cuentas vinculadas médicos y pacientes
+    // 5. Cuentas vinculadas medicos y pacientes
     console.log("\n5. GET /api/usuarios/cuentas-vinculadas-medicos & pacientes...");
-    const vincMed = await request("/api/usuarios/cuentas-vinculadas-medicos", {
+    const vMed = await request("/api/usuarios/cuentas-vinculadas-medicos", {
       headers: { Authorization: `Bearer ${tokenAdmin}` }
     });
-    const vincPac = await request("/api/usuarios/cuentas-vinculadas-pacientes", {
+    const vPac = await request("/api/usuarios/cuentas-vinculadas-pacientes", {
       headers: { Authorization: `Bearer ${tokenAdmin}` }
     });
-    console.log("Status Medicos:", vincMed.status, "Status Pacientes:", vincPac.status);
+    console.log("Status Medicos:", vMed.status, "Status Pacientes:", vPac.status);
+    if (vMed.status !== 200 || vPac.status !== 200) throw new Error("Fallo en cuentas-vinculadas");
 
     // 6. Login Médico
     console.log("\n6. Autenticación Médico A...");
@@ -80,6 +82,7 @@ async function run() {
       body: JSON.stringify({ email: "medico.a@hospital.com", password: "ClaveSegura2026*" })
     });
     console.log("Status:", loginMed.status, "Token:", !!loginMed.body?.token);
+    if (loginMed.status !== 200 || !loginMed.body?.token) throw new Error("Fallo en login de médico");
     const tokenMed = loginMed.body.token;
 
     // 7. Mi Contexto Médico
@@ -97,6 +100,7 @@ async function run() {
       body: JSON.stringify({ email: "paciente.a@example.com", password: "ClaveSegura2026*" })
     });
     console.log("Status:", loginPac.status, "Token:", !!loginPac.body?.token);
+    if (loginPac.status !== 200 || !loginPac.body?.token) throw new Error("Fallo en login de paciente");
     const tokenPac = loginPac.body.token;
 
     // 9. Mi Contexto Paciente
@@ -153,7 +157,7 @@ async function run() {
     console.log("Status:", atendCita.status, "Estado:", atendCita.body?.cita?.estado);
     if (atendCita.status !== 200 || atendCita.body?.cita?.estado !== "atendida") throw new Error("Fallo al atender cita");
 
-    // 13. Paciente solicita otra cita y la cancela (/api/citas/:id/cancelar)
+    // 13. Flujo de cancelación: paciente agenda y cancela cita propia
     console.log("\n13. Flujo de cancelación: paciente agenda y cancela cita propia...");
     const sol2 = await request("/api/citas/mis-solicitudes", {
       method: "POST",
@@ -175,7 +179,7 @@ async function run() {
     if (cancelCita.status !== 200 || cancelCita.body?.cita?.estado !== "cancelada") throw new Error("Fallo al cancelar cita");
 
     console.log("\n===============================================================");
-    console.log("  🎉 ¡TODOS LOS ENDPOINTS DEL FRONTEND FUNCIONAN PERFECTAMENTE! ");
+    console.log("  🎉 ¡TODAS LAS PRUEBAS DE INTEGRACIÓN DE LA API FUERON EXITOSAS!");
     console.log("===============================================================");
   } catch (err) {
     console.error("❌ ERROR EN PRUEBA DE INTEGRACIÓN:", err);

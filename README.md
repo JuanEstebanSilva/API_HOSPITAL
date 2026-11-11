@@ -124,14 +124,13 @@ API_HOSPITAL/
 │   ├── 03_seed_catalogos_demo_OPCIONAL.sql # Especialidades y consultorios demo
 │   ├── 04_seguridad_rls.sql        # Habilitación de Row Level Security
 │   ├── 05_verificacion_lectura.sql # Consultas de auditoría e inspección
-│   ├── 06_indices_adicionales_OPCIONAL.sql # Índices de optimización y unicidad
-│   └── historico/                  # Trazabilidad de laboratorios previos
+│   └── 06_indices_adicionales_OPCIONAL.sql # Índices de optimización y unicidad
 │
 ├── extraible/                      # [IGNORADO EN GIT] Archivo histórico y documentación previa
-│   ├── bloque_7/                   # Guías e insumos de los Bloques 7.2 a 7.5.1
-│   ├── bloque_8/                   # Guías y diagramas del Bloque 8
+│   ├── bloque_7/                   # Guías, scripts de validación e insumos de Bloques 7.2 a 7.5.1
+│   ├── bloque_8/                   # Guías, scripts de validación y diagramas del Bloque 8
 │   ├── bloque_10/                  # Colección Postman del Bloque 10
-│   ├── bloque_11/                  # Guía de pasos, Postman e insumos del Bloque 11
+│   ├── bloque_11/                  # Guía, scripts de validación, Postman y migraciones del Bloque 11
 │   ├── bloque_12_frontend/         # PDFs de requerimientos, insumos BE y FE originales
 │   ├── evidencias_e_informes/      # Informes Word .docx, capturas reales y scripts generadores
 │   └── README.md                   # Documentación explicativa de la carpeta extraíble
@@ -140,14 +139,11 @@ API_HOSPITAL/
 │   ├── setup_local_db.js           # Inicialización y migración completa de BD PostgreSQL
 │   ├── seed_comprehensive_demo.js  # Carga de datos de prueba para todas las suites
 │   ├── probar-conexion.js          # Diagnóstico de conexión y rol PostgreSQL
-│   ├── verificar-bd-bloque11.js    # Verificación de esquema, RLS y version_sesion
-│   ├── validar-bloques-7.js        # Suite de pruebas funcionales (Bloques 7.2 a 7.5)
-│   ├── validar-bloque-7-5-1.js     # Suite de pruebas de bootstrap administrativo
-│   ├── validar-bloque-8-seguridad.js # Suite de pruebas de seguridad RBAC y BOLA (SEG)
-│   ├── validar-bloque-11.js        # Suite de 26 pruebas completas del Bloque 11
-│   ├── test_frontend_api_integration.js # Validación de endpoints del Frontend
-│   ├── test_swagger_functional.py  # Validación automatizada de Swagger UI y OpenAPI en navegador
-│   └── test_e2e_browser.py         # Pruebas End-to-End en navegador real (Playwright)
+│   ├── test_api.js                 # Suite completa de integración de endpoints de la API Hospital
+│   ├── test_seguridad.js           # Batería de 26 pruebas de seguridad: JWT, sesión, RBAC, BOLA y CORS
+│   ├── test_swagger.js             # Verificación nativa rápida de Swagger UI y OpenAPI 3.0.3
+│   ├── test_swagger_functional.py  # Validación automatizada de Swagger UI en navegador (Playwright/Edge)
+│   └── test_e2e_browser.py         # Pruebas End-to-End en navegador real (Playwright/Edge)
 │
 ├── src/                            # Código fuente del Backend Express
 │   ├── config/
@@ -267,13 +263,11 @@ El proyecto dispone de un conjunto exhaustivo de scripts de prueba automatizados
 | Comando | Script | Cobertura y Objetivo |
 |---|---|---|
 | `npm run test:db` | `scripts/probar-conexion.js` | Diagnóstico de conexión a PostgreSQL, usuario actual y verificación de RLS. |
-| `npm run test:bootstrap` | `scripts/validar-bloque-7-5-1.js` | Pruebas BA01 a BA07: validación de bootstrap administrativo, no duplicación e idempotencia. |
-| `npm run test:seguridad` | `scripts/validar-bloque-8-seguridad.js` | Pruebas SEG-01 a SEG-08 + P06 + P35: control de acceso BOLA/IDOR, autorización RBAC y API Key. |
-| `npm run test:bloque11` | `scripts/validar-bloque-11.js` | Suite oficial de 26 pruebas del Bloque 11: versionado de sesión, tokens de recuperación, códigos de respaldo y CORS. |
-| `npm run test:fe` | `scripts/test_frontend_api_integration.js` | Validación completa de endpoints consumidos por la SPA de React (estadísticas, contexto, acciones de cita). |
-| `npm run test:swagger` | `scripts/test_swagger_functional.py` | Auditoría funcional automatizada de Swagger UI y especificación OpenAPI 3.0.3 en navegador real (Edge/Playwright). |
-| `npm run test:e2e` | `scripts/test_e2e_browser.py` | Pruebas End-to-End con Playwright navegando en navegador real (Login Admin/Médico/Paciente, Dashboard y Screenshots). |
-| `npm test` | `scripts/validar-bloques-7.js` | Batería integral de pruebas funcionales de negocio (Bloques 7.2 a 7.5). |
+| `npm test` / `npm run test:api` | `scripts/test_api.js` | Suite completa de pruebas funcionales y de integración de los endpoints de la API Hospital. |
+| `npm run test:seguridad` | `scripts/test_seguridad.js` | Suite de 26 pruebas de seguridad: JWT, versionado de sesión, tokens de recuperación, códigos de respaldo, RBAC, BOLA y CORS. |
+| `npm run test:swagger` | `scripts/test_swagger.js` | Verificación nativa rápida de especificación OpenAPI 3.0.3 (38 rutas, 59 operaciones) y Swagger UI. |
+| `npm run test:swagger:browser` | `scripts/test_swagger_functional.py` | Auditoría funcional interactiva de Swagger UI en navegador real (Edge/Playwright). |
+| `npm run test:e2e` | `scripts/test_e2e_browser.py` | Pruebas End-to-End con Playwright navegando en navegador real (Login Admin/Médico/Paciente, Dashboard y navegación). |
 | `npm --prefix api-hospital-frontend run lint` | Oxlint | Análisis estático de código del frontend (0 advertencias, 0 errores en 35 archivos). |
 | `npm --prefix api-hospital-frontend run build` | Vite build | Compilación y empaquetado de producción de la SPA (59 módulos transformados exitosamente). |
 
