@@ -21,3 +21,4 @@ __pycache__/
 # Temporary artifacts
 _tmp_*
 *.log
+*.docx
